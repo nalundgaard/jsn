@@ -1,0 +1,23 @@
+/deps
+/ebin
+.rebar
+*.beam
+erl_crash.dump
+
+# vim
+*.swp
+
+# dailyzer
+/.dialyzer_deps_plt
+/dialyzer.output
+
+# test
+/.eunit
+*.coverage.xml
+*.coverdata
+
+# ct
+/logs
+
+# developers copy
+erl.config

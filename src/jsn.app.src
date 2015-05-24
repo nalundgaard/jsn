@@ -1,0 +1,14 @@
+%%------------------------------------------------------------------------------
+%% @doc jsn
+%%
+%% OTP Application Definition
+%%
+%% @author Nicholas Lundgaard <nlundgaard@alertlogic.com>
+%%------------------------------------------------------------------------------
+{application, jsn, [
+    {description, "Utilities for interacting with decoded JSON in erlang"},
+    {vsn, git},
+    {applications, [kernel,
+                    stdlib]}
+ ]}.
+% vim:ft=erlang
