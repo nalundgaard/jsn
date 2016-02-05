@@ -1,6 +1,8 @@
 jsn
 ===
 
+[![Build Status](https://secure.travis-ci.org/nalundgaard/jsn.png?branch=master)](http://travis-ci.org/nalundgaard/jsn)
+
 jsn is a tool for working with JSON representations in erlang--complex, nested
 JSON objects in particular.
 
