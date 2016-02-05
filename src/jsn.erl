@@ -1,5 +1,5 @@
 %%------------------------------------------------------------------------------
-%%  jsn Funfcions for interacting with decoded JSON objects 
+%%  jsn Functions for interacting with decoded JSON objects 
 %%
 %% @author Nicholas Lundgaard <nlundgaard@alertlogic.com>
 %%------------------------------------------------------------------------------
