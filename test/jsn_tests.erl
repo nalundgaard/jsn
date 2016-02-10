@@ -7,14 +7,6 @@
 
 -include("jsn.hrl").
 
--ifdef(legacy_timestamp).
-%% Erlang 17- time
--define(TIMESTAMP(), erlang:now()).
--else.
-%% Erlang R18+ 
--define(TIMESTAMP(), erlang:timestamp()).
--endif.
-
 %%==============================================================================
 %% json object generation
 %%==============================================================================
@@ -601,8 +593,8 @@ from_as_proplist() ->
 %% run the above test several times
 from_as_proplist_test_() ->
     {setup,
-        fun() -> random:seed(?TIMESTAMP()) end,
-        fun(_) -> ok end,
+        fun() -> crypto:start() end,
+        fun(_) -> crypto:stop() end,
         [fun from_as_proplist/0 || _ <- lists:seq(1, 5)]}.
 
 
