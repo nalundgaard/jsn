@@ -50,6 +50,8 @@
                 [ json_key() ] | 
                 tuple().  %% tuple containing binary() | json_array_index()
 
+-type paths() :: [ path() ].
+
 -type path_value_tuple() :: { path(),  Value :: json_term() }.
 -type path_value_tuples() :: [ path_value_tuple() ].
 
