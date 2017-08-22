@@ -32,13 +32,13 @@ Running
 To run this library locally, build the source code:
 
 ```sh
-make deps all
+make
 ```
 
 Then start an erlang shell:
 
 ```sh
-./erl.sh
+make start
 ```
 
 jsn is an OTP library, and does not really need to be started as such. 

@@ -1,38 +1,25 @@
-REBAR=./rebar
+REBAR ?= ./rebar3
+REBAR_CMD = $(REBAR) $(profile:%=as %)
 
-.PHONY: all compile deps clean clean-deps test 
-
-
-all: compile
-
-
-deps:
-	$(REBAR) get-deps
-
+all: compile xref eunit
 
 compile:
-	$(REBAR) compile
+	@$(REBAR_CMD) compile
 
-
-test: eunit
-
-
-eunit:
-	ERL_AFLAGS="-config erl" $(REBAR) eunit skip_deps=true
-
-
-dialyzer:
-	./dialyzer.sh
-
+xref:
+	@$(REBAR_CMD) xref
 
 clean:
-	$(REBAR) clean
-	rm -rf ebin dialyzer.output .eunit
+	@$(REBAR_CMD) clean
 
+eunit:
+	@$(REBAR_CMD) do eunit,cover
 
-clean-deps:
-	$(REBAR) delete-deps
-	rm -rf deps .dialyzer_deps_plt
+edoc:
+	@$(REBAR_CMD) edoc
 
+start: compile
+	-@$(REBAR_CMD) shell
 
-fresh: clean clean-deps deps compile test
+dialyze: compile
+	@$(REBAR_CMD) dialyzer

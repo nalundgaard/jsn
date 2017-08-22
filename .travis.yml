@@ -1,7 +1,14 @@
 language: erlang
+sudo: false
 otp_release:
   - 20.0
   - 19.3
   - 18.3
   - 17.5
   - R16B03-1
+install: true
+script:
+  - ./rebar3 compile 
+  - ./rebar3 eunit
+  - ./rebar3 xref
+  - ./rebar3 edoc
