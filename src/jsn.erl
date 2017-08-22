@@ -36,7 +36,7 @@
 -export([as_proplist/1, from_proplist/1, from_proplist/2]).
 
 -ifdef(TEST).
--compile([export_all, debug_info]).
+-compile([export_all, nowarn_export_all, debug_info]).
 -endif.
 
 %%==============================================================================
