@@ -117,6 +117,38 @@ new_1_test_() ->
                                      {{<<"foo">>, <<"bar">>, last}, 3},
                                      {{<<"foo">>, <<"bar">>, 2}, 2}]))].
 
+-ifdef(maps_support).
+
+new_2_test_() ->
+    Object1 = [{<<"foo">>, <<"bar">>}],
+    Object1Eep18 = {[{<<"foo">>, <<"bar">>}]},
+    Object1Struct = {struct, [{<<"foo">>, <<"bar">>}]},
+    Object1Map = #{<<"foo">> => <<"bar">>},
+    Object2 = [{<<"foo">>, [{<<"bar">>, <<"hoge">>}]}],
+    Object2Eep18 = {[{<<"foo">>, {[{<<"bar">>, <<"hoge">>}]}}]},
+    Object2Struct = {struct, [{<<"foo">>, {struct, [{<<"bar">>, <<"hoge">>}]}}]},
+    Object2Map = #{<<"foo">> => #{<<"bar">> => <<"hoge">>}},
+    [?_assertEqual(?EMPTY_PROPLIST, jsn:new([])),
+     ?_assertEqual(?EMPTY_EEP18, jsn:new([], [{format, eep18}])),
+     ?_assertEqual(?EMPTY_STRUCT, jsn:new([], [{format, struct}])),
+     ?_assertEqual(?EMPTY_MAP, jsn:new([], [{format, map}])),
+     ?_assertEqual(Object1, jsn:new({<<"foo">>, <<"bar">>}, [{format, proplist}])),
+     ?_assertEqual(Object1, jsn:new({foo, <<"bar">>}, [])),
+     ?_assertEqual(Object1Eep18, jsn:new({foo, <<"bar">>}, [{format, eep18}])),
+     ?_assertEqual(Object1Eep18, jsn:new([{<<"foo">>, <<"bar">>}], [{format, eep18}])),
+     ?_assertEqual(Object1Struct, jsn:new({foo, <<"bar">>}, [{format, struct}])),
+     ?_assertEqual(Object1Struct, jsn:new([{<<"foo">>, <<"bar">>}], [{format, struct}])),
+     ?_assertEqual(Object1Map, jsn:new({foo, <<"bar">>}, [{format, map}])),
+     ?_assertEqual(Object1Map, jsn:new({<<"foo">>, <<"bar">>}, [{format, map}])),
+     ?_assertEqual(Object2, jsn:new({'foo.bar', <<"hoge">>}, [])),
+     ?_assertEqual(Object2, jsn:new({'foo.bar', <<"hoge">>}, [{format, proplist}])),
+     ?_assertEqual(Object2Eep18, jsn:new({<<"foo.bar">>, <<"hoge">>}, [{format, eep18}])),
+     ?_assertEqual(Object2Struct, jsn:new({'foo.bar', <<"hoge">>}, [{format, struct}])),
+     ?_assertEqual(Object2Map, jsn:new({<<"foo.bar">>, <<"hoge">>}, [{format, map}])),
+     ?_assertEqual(Object2Map, jsn:new({'foo.bar', <<"hoge">>}, [{format, map}])),
+     ?_assertError(badarg, jsn:new([], [{format, random}]))].
+
+-else.
 
 new_2_test_() ->
     Object1 = [{<<"foo">>, <<"bar">>}],
@@ -140,6 +172,7 @@ new_2_test_() ->
      ?_assertEqual(Object2Struct, jsn:new({'foo.bar', <<"hoge">>}, [{format, struct}])),
      ?_assertError(badarg, jsn:new([], [{format, random}]))].
 
+-endif.
 
 get_test_() ->
     Src = jsn:new([{<<"foo">>, <<"bar">>},
@@ -158,6 +191,26 @@ get_test_() ->
      ?_assertEqual(undefined, jsn:get({<<"baz">>, 99}, Src)),
      ?_assertEqual(undefined, jsn:get(<<"bar">>, Src))].
 
+-ifdef(maps_support).
+
+get_map_test_() ->
+    Src = #{<<"foo">> => <<"bar">>,
+            <<"qux">> => #{<<"lux">> => 99},
+            <<"baz">> => [0, 10, 20]},
+    [?_assertEqual(<<"bar">>, jsn:get(<<"foo">>, Src)),
+     ?_assertEqual(<<"bar">>, jsn:get(foo, Src)),
+     ?_assertEqual(99, jsn:get('qux.lux', Src)),
+     ?_assertEqual(99, jsn:get([<<"qux">>, lux], Src)),
+     ?_assertEqual(99, jsn:get({<<"qux">>, <<"lux">>}, Src)),
+     ?_assertEqual(0, jsn:get({<<"baz">>, 1}, Src)),
+     ?_assertEqual(0, jsn:get({<<"baz">>, first}, Src)),
+     ?_assertEqual(10, jsn:get({<<"baz">>, 2}, Src)),
+     ?_assertEqual(20, jsn:get({<<"baz">>, 3}, Src)),
+     ?_assertEqual(20, jsn:get({<<"baz">>, last}, Src)),
+     ?_assertEqual(undefined, jsn:get({<<"baz">>, 99}, Src)),
+     ?_assertEqual(undefined, jsn:get(<<"bar">>, Src))].
+
+-endif.
 
 get_list_test_() ->
     Src = jsn:new([{<<"foo">>, <<"bar">>},
@@ -173,13 +226,33 @@ get_list_test_() ->
      ?_assertEqual(R3, jsn:get_list([<<"qux">>, 'a.b.c'], Src)),
      ?_assertEqual(R3, jsn:get_list([qux, [<<"a">>,b,<<"c">>]], Src))].
 
+-ifdef(maps_support).
 
-find_test_() ->
-    Src0 = jsn:new([
-            {<<"foo">>, <<"bar">>},
-            {<<"qux">>, 99},
-            {<<"baz">>, <<"hoge">>}
-    ]),
+find_map_test_() ->
+    Src0 = jsn:new([{<<"foo">>, <<"bar">>},
+                    {<<"qux">>, 99},
+                    {<<"baz">>, <<"hoge">>}],
+                   [{format, map}]),
+    Src1 = jsn:set(<<"moo">>, Src0, <<"cow">>),
+    Src2 = jsn:set(<<"foo">>, Src0, <<"kaboom">>),
+    Objects = [Src0, Src1, Src2],
+    Haystack = jsn:new({<<"weeble">>, Objects}, [{format, map}]),
+    Needle = <<"bar">>,
+    [?_assertEqual([Src0, Src1], jsn:find(foo, Needle, Objects)),
+     ?_assertEqual([], jsn:find(mop, Needle, Objects)),
+     ?_assertEqual([Src1], jsn:find(moo, <<"cow">>, Objects)),
+     ?_assertEqual([], jsn:find(moo, cow, Objects)),
+     ?_assertEqual([Src0, Src1], jsn:find(weeble, foo, Needle, Haystack)),
+     ?_assertEqual([], jsn:find(weeble, mop, Needle, Haystack)),
+     ?_assertEqual([Src1], jsn:find(weeble, moo, <<"cow">>, Haystack)),
+     ?_assertEqual([], jsn:find(weeble, moo, cow, Haystack))].
+
+-endif.
+
+find_proplist_test_() ->
+    Src0 = jsn:new([{<<"foo">>, <<"bar">>},
+                    {<<"qux">>, 99},
+                    {<<"baz">>, <<"hoge">>}]),
     Src1 = jsn:set(<<"moo">>, Src0, <<"cow">>),
     Src2 = jsn:set(<<"foo">>, Src0, <<"kaboom">>),
     Objects = [Src0, Src1, Src2],
@@ -194,6 +267,40 @@ find_test_() ->
      ?_assertEqual([Src1], jsn:find(weeble, moo, <<"cow">>, Haystack)),
      ?_assertEqual([], jsn:find(weeble, moo, cow, Haystack))].
 
+-ifdef(maps_support).
+
+set_test_() ->
+    Path = <<"foo.bar">>,
+    Object1 = jsn:new({Path, <<"baz">>}),
+    Object1Map = jsn:new({Path, <<"baz">>}, [{format, map}]),
+    Object2 = jsn:new({Path, [1, 2, 3]}),
+    Object2Map = jsn:new({Path, [1, 2, 3]}, [{format, map}]),
+    [?_assertEqual([{<<"foo">>, <<"bar">>}], jsn:set(<<"foo">>, jsn:new(), <<"bar">>)),
+     ?_assertEqual(#{<<"foo">> => <<"bar">>}, jsn:set(<<"foo">>, #{}, <<"bar">>)),
+     ?_assertEqual(Object1, jsn:set(Path, Object1, <<"baz">>)),
+     ?_assertEqual(Object1Map, jsn:set(Path, Object1Map, <<"baz">>)),
+     ?_assertEqual(Object2, jsn:set(Path, Object1, [1, 2, 3])),
+     ?_assertEqual(Object2Map, jsn:set(Path, Object1Map, [1, 2, 3])),
+     ?_assertEqual([99, 2, 3], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, first}, Object2, 99))),
+     ?_assertEqual([99, 2, 3], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, first}, Object2Map, 99))),
+     ?_assertEqual([99, 2, 3], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, 1}, Object2, 99))),
+     ?_assertEqual([99, 2, 3], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, 1}, Object2Map, 99))),
+     ?_assertEqual([1, 99, 3], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, 2}, Object2, 99))),
+     ?_assertEqual([1, 99, 3], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, 2}, Object2Map, 99))),
+     ?_assertEqual([1, 2, 99], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, 3}, Object2, 99))),
+     ?_assertEqual([1, 2, 99], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, 3}, Object2Map, 99))),
+     ?_assertEqual([1, 2, 99], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, last}, Object2, 99))),
+     ?_assertEqual([1, 2, 99], jsn:get(Path, jsn:set({<<"foo">>, <<"bar">>, last}, Object2Map, 99))),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:set(<<"k">>, [1,2,3], <<"v">>)),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:set(<<"k">>, <<"a">>, <<"v">>)),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:set(<<"k">>, 0, <<"v">>)),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:set(<<"k">>, {[0]}, <<"v">>)),
+     ?_assertThrow({error, {not_an_array, _}}, jsn:set({1}, [{<<"k">>, 1}], <<"v">>)),
+     ?_assertThrow({error, {not_an_array, _}}, jsn:set({1}, #{<<"k">>=> 1}, <<"v">>)),
+     ?_assertThrow({error, {not_an_array, _}}, jsn:set({<<"k">>, 1}, [{<<"k">>, 1}], <<"v">>)),
+     ?_assertThrow({error, {not_an_array, _}}, jsn:set({<<"k">>, 1}, #{<<"k">> => 1}, <<"v">>))].
+
+-else.
 
 set_test_() ->
     Path = <<"foo.bar">>,
@@ -214,6 +321,7 @@ set_test_() ->
      ?_assertThrow({error, {not_an_array, _}}, jsn:set({1}, [{<<"k">>, 1}], <<"v">>)),
      ?_assertThrow({error, {not_an_array, _}}, jsn:set({<<"k">>, 1}, [{<<"k">>, 1}], <<"v">>))].
 
+-endif.
 
 set_list_test_() ->
     EmptyObject = jsn:new(),
@@ -228,6 +336,37 @@ set_list_test_() ->
      ?_assertEqual(EndObject2, jsn:set_list([{<<"hoge">>, <<"qux">>}], EndObject1)),
      ?_assertEqual(<<"qux">>, jsn:get(<<"hoge">>, jsn:set_list([{<<"hoge">>, <<"qux">>}], EndObject1)))].
 
+-ifdef(maps_support).
+
+delete_test_() ->
+    Path1 = <<"foo.bar">>,
+    Path2 = <<"qux.lux">>,
+    Object1 = jsn:new([{Path1, <<"baz">>}, {Path2, [1,2,3]}]),
+    Object1Map = jsn:new([{Path1, <<"baz">>}, {Path2, [1,2,3]}], [{format, map}]),
+    [?_assertEqual([], jsn:delete(<<"foo">>, [{<<"foo">>, <<"bar">>}])),
+     ?_assertEqual(#{}, jsn:delete(<<"foo">>, #{<<"foo">> => <<"bar">>})),
+     ?_assertEqual(jsn:new({Path2, [1,2,3]}), jsn:delete(foo, Object1)),
+     ?_assertEqual(jsn:new({Path2, [1,2,3]}, [{format, map}]), jsn:delete(foo, Object1Map)),
+     ?_assertEqual(jsn:new({Path1, <<"baz">>}), jsn:delete(qux, Object1)),
+     ?_assertEqual(jsn:new({Path1, <<"baz">>}, [{format, map}]), jsn:delete(qux, Object1Map)),
+     ?_assertEqual([2, 3], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, first}, Object1))),
+     ?_assertEqual([2, 3], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, first}, Object1Map))),
+     ?_assertEqual([2, 3], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, 1}, Object1))),
+     ?_assertEqual([2, 3], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, 1}, Object1Map))),
+     ?_assertEqual([1, 3], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, 2}, Object1))),
+     ?_assertEqual([1, 3], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, 2}, Object1Map))),
+     ?_assertEqual([1, 2], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, 3}, Object1))),
+     ?_assertEqual([1, 2], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, 3}, Object1Map))),
+     ?_assertEqual([1, 2], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, last}, Object1))),
+     ?_assertEqual([1, 2], jsn:get(Path2, jsn:delete({<<"qux">>, <<"lux">>, last}, Object1Map))),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:delete(<<"k">>, [1,2,3])),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:delete(<<"k">>, <<"a">>)),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:delete(<<"k">>, 0)),
+     ?_assertThrow({error, {not_an_object, _}}, jsn:delete(<<"k">>, {[0]})),
+     ?_assertThrow({error, {not_an_array, _}}, jsn:delete({1}, #{<<"k">> => 1})),
+     ?_assertThrow({error, {not_an_array, _}}, jsn:delete({<<"k">>, 1}, #{<<"k">> => 1}))].
+
+-else.
 
 delete_test_() ->
     Path1 = <<"foo.bar">>,
@@ -248,6 +387,8 @@ delete_test_() ->
      ?_assertThrow({error, {not_an_array, _}}, jsn:delete({1}, [{<<"k">>, 1}])),
      ?_assertThrow({error, {not_an_array, _}}, jsn:delete({<<"k">>, 1}, [{<<"k">>, 1}]))].
 
+-endif.
+
 delete_list_test_() ->
     Base = jsn:new([{<<"foo">>, <<"bar">>},
                     {<<"qux">>, 99},
@@ -264,6 +405,7 @@ delete_if_equal_test_() ->
                             {<<"baz">>, <<"hoge">>}]),
                    jsn:delete_if_equal(<<"qux">>, [null, 99], Base)),
      ?_assertEqual(Base, jsn:delete_if_equal(<<"baz">>, null, Base))].
+
 
 copy_test_() ->
     Src = jsn:new([{<<"foo">>, <<"bar">>},
@@ -282,6 +424,7 @@ copy_test_() ->
      ?_assertEqual(R3, jsn:copy([<<"foo">>, <<"mop">>], Src, jsn:new([], [{format, struct}]))),
      ?_assertEqual(R3, jsn:copy([<<"foo">>, <<"mop">>], Src, [jsn:new([], [{format, struct}])])),
      ?_assertError(badarg, jsn:copy([<<"foo">>, <<"mop">>], Src, jsn:new(), gg))].
+
 
 transform_test_() ->
     Src = jsn:new([{<<"foo">>, <<"bar">>},
@@ -302,6 +445,7 @@ transform_test_() ->
     [?_assertEqual(R1, jsn:transform(T1, Src)),
      ?_assertEqual(R2, jsn:transform(T2, Src))].
 
+
 path_transform_test_() ->
     Src = jsn:new([{<<"foo">>, <<"bar">>},
                    {<<"qux">>, 99}]),
@@ -313,6 +457,7 @@ path_transform_test_() ->
     T2 = [{<<"foo">>, <<"baz">>}, {<<"map">>, <<"mop">>}], 
     [?_assertEqual(R1, jsn:path_transform(T1, Src)),
      ?_assertEqual(R2, jsn:path_transform(T2, Src))].
+
 
 copy_mutate_test_() ->
     Src = jsn:new([{<<"foo">>, <<"bar">>},
@@ -475,6 +620,112 @@ path_equal_test_() ->
      ?_assertEqual({error, jsn:to_binary(Field2)}, jsn:path_equal(Field2, Params, MisMatchedParams, soft)),
      ?_assertEqual({error, jsn:to_binary(Field2)}, jsn:path_equal(Field2, Params, MisMatchedParams, soft))].
 
+-ifdef(maps_support).
+
+is_equal_test_() ->
+    TestParams = [{'foo.bar.baz', null},
+                  {<<"foo.fum">>, <<"ok">>},
+                  {<<"foo.q.e.d">>, true},
+                  {<<"abc">>, [1,2,3]}],
+    Extra = [{'foo.extra', <<"extra">>}],
+    Proplist = jsn:new(TestParams, [{format, proplist}]),
+    Eep18 = jsn:new(TestParams, [{format, eep18}]),
+    Struct = jsn:new(TestParams, [{format, struct}]),
+    Map = jsn:new(TestParams, [{format, map}]),
+    ExtraProplist = jsn:new(Extra ++ TestParams, [{format, proplist}]),
+    ExtraEep18 = jsn:new(TestParams ++ Extra, [{format, eep18}]),
+    ExtraStruct = jsn:new(TestParams ++ Extra, [{format, struct}]),
+    ExtraMap = jsn:new(TestParams ++ Extra, [{format, map}]),
+    [?_assert(jsn:is_equal(<<"a">>, <<"a">>)),
+     ?_assert(jsn:is_equal([1,2], [1,2])),
+     ?_assert(jsn:is_equal(jsn:new(), jsn:new())),
+     ?_assert(jsn:is_equal(#{}, #{})),
+     ?_assert(jsn:is_equal(Proplist, Proplist)),
+     ?_assert(jsn:is_equal(Proplist, Struct)),
+     ?_assert(jsn:is_equal(Proplist, Eep18)),
+     ?_assert(jsn:is_equal(Proplist, Map)),
+     ?_assert(jsn:is_equal(Eep18, Proplist)),
+     ?_assert(jsn:is_equal(Eep18, Eep18)),
+     ?_assert(jsn:is_equal(Eep18, Struct)),
+     ?_assert(jsn:is_equal(Eep18, Map)),
+     ?_assert(jsn:is_equal(Struct, Proplist)),
+     ?_assert(jsn:is_equal(Struct, Eep18)),
+     ?_assert(jsn:is_equal(Struct, Struct)),
+     ?_assert(jsn:is_equal(Struct, Map)),
+     ?_assert(jsn:is_equal(Map, Proplist)),
+     ?_assert(jsn:is_equal(Map, Struct)),
+     ?_assert(jsn:is_equal(Map, Eep18)),
+     ?_assert(jsn:is_equal(Map, Map)),
+     ?_assert(jsn:is_equal(null, null)),
+     ?_assertNot(jsn:is_equal(true, false)),
+     ?_assertNot(jsn:is_equal(Proplist, ExtraProplist)),
+     ?_assertNot(jsn:is_equal(Proplist, ExtraEep18)),
+     ?_assertNot(jsn:is_equal(Proplist, ExtraStruct)),
+     ?_assertNot(jsn:is_equal(Proplist, ExtraMap)),
+     ?_assertNot(jsn:is_equal(Eep18, ExtraProplist)),
+     ?_assertNot(jsn:is_equal(Eep18, ExtraEep18)),
+     ?_assertNot(jsn:is_equal(Eep18, ExtraStruct)),
+     ?_assertNot(jsn:is_equal(Eep18, ExtraMap)),
+     ?_assertNot(jsn:is_equal(Struct, ExtraProplist)),
+     ?_assertNot(jsn:is_equal(Struct, ExtraEep18)),
+     ?_assertNot(jsn:is_equal(Struct, ExtraStruct)),
+     ?_assertNot(jsn:is_equal(Struct, ExtraMap)),
+     ?_assertNot(jsn:is_equal(Map, ExtraProplist)),
+     ?_assertNot(jsn:is_equal(Map, ExtraEep18)),
+     ?_assertNot(jsn:is_equal(Map, ExtraStruct)),
+     ?_assertNot(jsn:is_equal(Map, ExtraMap)),
+     ?_assertNot(jsn:is_equal(undefined, undefined)),
+     ?_assertNot(jsn:is_equal([1,undefined], [1,undefined]))].
+
+
+is_subset_test_() ->
+    [?_assert(jsn:is_subset(<<"a">>, <<"a">>)),
+     ?_assert(jsn:is_subset([1,2], [3,4,2,1])),
+     ?_assert(jsn:is_subset(jsn:new(), jsn:new({a, 99}))),
+     ?_assert(jsn:is_subset(#{}, #{a => 99})),
+     ?_assert(jsn:is_subset({[]}, #{a => 99})),
+     ?_assert(jsn:is_subset(null, null)),
+     ?_assertNot(jsn:is_subset(undefined, undefined)),
+     ?_assertNot(jsn:is_subset([1,undefined], [1,undefined])),
+     ?_assertNot(jsn:is_subset(true, false))].
+
+
+is_equal() ->
+    Map = generate_json_object(7, [{format, map}]),
+    Proplist = jsn:as_proplist(Map),
+    Eep18 = jsn:from_proplist(Proplist, [{format, eep18}]),
+    Struct = jsn:from_proplist(Proplist, [{format, struct}]),
+    NotEqualProplist = [{qqqqqqqqqqqq, 9} | Proplist],
+    ?assert(jsn:is_equal(Map, Map)),
+    ?assert(jsn:is_equal(Map, Proplist)),
+    ?assert(jsn:is_equal(Proplist, Proplist)),
+    ?assert(jsn:is_equal(Proplist, Map)),
+    ?assert(jsn:is_equal(Proplist, Eep18)),
+    ?assert(jsn:is_equal(Proplist, Struct)),
+    ?assert(jsn:is_equal([Proplist, Struct, 3], [Proplist, Eep18, 3])),
+    ?assertNot(jsn:is_equal(NotEqualProplist, Proplist)),
+    ?assertNot(jsn:is_equal(NotEqualProplist, Struct)),
+    ?assertNot(jsn:is_equal(NotEqualProplist, Eep18)).
+
+
+is_subset() ->
+    Map = generate_json_object(7, [{format, map}]),
+    Proplist = jsn:as_proplist(Map),
+    Eep18 = jsn:from_proplist(Proplist, [{format, eep18}]),
+    Struct = jsn:from_proplist(Proplist, [{format, struct}]),
+    SuperProplist = [{qqqqqqqqqqqq, 9} | Proplist],
+    ?assert(jsn:is_subset(Map, SuperProplist)),
+    ?assert(jsn:is_subset(Proplist, SuperProplist)),
+    ?assert(jsn:is_subset(Eep18, SuperProplist)),
+    ?assert(jsn:is_subset(Struct, SuperProplist)),
+    ?assert(jsn:is_subset([Struct], [6, SuperProplist])),
+    ?assertNot(jsn:is_subset(SuperProplist, Map)),
+    ?assertNot(jsn:is_subset(SuperProplist, Proplist)),
+    ?assertNot(jsn:is_subset(SuperProplist, Eep18)),
+    ?assertNot(jsn:is_subset(SuperProplist, Struct)),
+    ?assertNot(jsn:is_subset([SuperProplist, 4], [Struct, 4])).
+
+-else.
 
 is_equal_test_() ->
     TestParams = [{'foo.bar.baz', null},
@@ -554,6 +805,8 @@ is_subset() ->
     ?assertNot(jsn:is_subset(SuperProplist, Struct)),
     ?assertNot(jsn:is_subset([SuperProplist, 4], [Struct, 4])).
 
+-endif.
+
 %% run the above tests several times
 is_equal_subset_test_() ->
     {setup,
@@ -588,20 +841,38 @@ encode_decode_test_() ->
      ?_assertThrow({error, _}, jsn:decode("{ ", StructOpt)),
      ?_assertThrow({error, _}, jsn:encode({error, bogus, object}))].
 
+-ifdef(maps_support).
+
+from_as_proplist() ->
+    Proplist = jsn:sort_keys(generate_json_object(7, [{format, proplist}])),
+    Eep18 = jsn:from_proplist(Proplist, [{format, eep18}]),
+    Struct = jsn:from_proplist(Proplist, [{format, struct}]),
+    Map = jsn:from_proplist(Proplist, [{format, map}]),
+    ?assertEqual(Proplist, jsn:from_proplist(Proplist)),
+    ?assertEqual(Proplist, jsn:from_proplist(Proplist, [{format, proplist}])),
+    ?assertEqual(Eep18, jsn:from_proplist(Proplist, [{format, eep18}])),
+    ?assertEqual(Struct, jsn:from_proplist(Proplist, [{format, struct}])),
+    ?assertEqual(Map, jsn:from_proplist(Proplist, [{format, map}])),
+    ?assertEqual(Proplist, jsn:as_proplist(Proplist)),
+    ?assertEqual(Proplist, jsn:as_proplist(Eep18)),
+    ?assertEqual(Proplist, jsn:as_proplist(Struct)),
+    ?assertEqual(Proplist, jsn:sort_keys(jsn:as_proplist(Map))).
+
+-else.
 
 from_as_proplist() ->
     Eep18 = generate_json_object(7, [{format, eep18}]),
     Proplist = jsn:as_proplist(Eep18),
-    Proplist = jsn:from_proplist(Proplist),
-    Proplist = jsn:from_proplist(Proplist, [{format, proplist}]),
-    Eep18 = jsn:from_proplist(Proplist, [{format, eep18}]),
     Struct = jsn:from_proplist(Proplist, [{format, struct}]),
+    ?assertEqual(Proplist, jsn:from_proplist(Proplist)),
+    ?assertEqual(Proplist, jsn:from_proplist(Proplist, [{format, proplist}])),
     ?assertEqual(Eep18, jsn:from_proplist(Proplist, [{format, eep18}])),
+    ?assertEqual(Struct, jsn:from_proplist(Proplist, [{format, struct}])),
     ?assertEqual(Proplist, jsn:as_proplist(Proplist)),
     ?assertEqual(Proplist, jsn:as_proplist(Eep18)),
-    ?assertEqual(Proplist, jsn:as_proplist(Struct)),
-    ?assert(jsn:is_equal(Proplist, Eep18)),
-    ?assert(jsn:is_equal(Proplist, Struct)).
+    ?assertEqual(Proplist, jsn:as_proplist(Struct)).
+
+-endif.
 
 %% run the above test several times
 from_as_proplist_test_() ->

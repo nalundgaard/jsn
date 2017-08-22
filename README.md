@@ -11,52 +11,64 @@ Unlike [ej][ej], however, it supports _all three_ common JSON representations
 in Erlang:
 
 * `proplist` (**default**)(common to [jsx][jsx] and [jsonx][jsonx])
+* `map` (common to [jsone][jsone], [jiffy][jiffy], and [jsx][jsx])
 * `eep18` (common to [jiffy][jiffy], [jsone][jsone], and [jsonx][jsonx])
-* `struct` (common to [mochijson2][mochijson2]) 
+* `struct` (common to [mochijson2][mochijson2])
 
-In addition to supporting the additional `proplist` format, jsn's path
-input structure is somewhat more flexible, allowing for input of
+In addition to supporting the additional `proplist` and `map` formats, jsn's
+path input structure is somewhat more flexible, allowing for input of
 period-delimited binary strings or atoms to indicate a path through a
 deeply nested structure. This support is similar to [kvc][kvc]'s path format,
 and also likely to be familiar to users of [erlson][erlson].
 
 This code base was originally developed as a wrapper around [ej][ej], adding
 support for the 'syntactic sugar' of the period-delimited keys. However, a
-need arose for the library to be proplist-compatible, so it has been refactored
-to be a nearly standalone library.
+need arose for the library to be proplist-compatible, then map-compatible, so
+it has been refactored to be a nearly standalone library.
 
 ## Caveats & known issues
 
-### Proplist format concerns
+### Deprecated: Erlang 17 or lower
 
-It should be noted that the `proplist` format supported by jsn is [jsonx][jsonx]
-compatible, and has a minor incompatibility with the comparable formats in
-[jsx][jsx] and [jsone][jsone]. jsn uses the empty list (`[]`) like [jsonx][jsonx]
-to represent an empty object, whereas [jsx][jsx] and [jsone][jsone] use an empty
-tuple in a list (`[{}]`) to represent empty objects. jsn is incompatible with
-this format. While the getter (`jsn:get/2,3`) functions are generally functional;
-most other library functions are not, and may result in unpredictable behaviors.
+jsn will no longer support Erlang 17 or previous Erlang releases. Allowing the
+`map` format to work without breaking Erlang versions that do not support maps
+(or have an incomplete implementation of maps, i.e., Erlang 17) requires
+inelegant conditional macros throughout the code and test. This support will
+be removed in the next major version of jsn.
 
 ### Deprecated: encoding and decoding
 
-jsn will no longer be supporting encoding and decoding. See [below](#encode-decode)
-for more information.
+jsn will no longer support encoding and decoding. It will be removed in the next
+major version of jsn. See [below](#encode-decode) for more information.
+
+### Deprecated: key sorting functions
+
+jsn will no longer support the `jsn:sort/1`, `jsn:sort_keys/1`, and
+`jsn:sort_equal/2` functions. These functions are incompatible with the `map`
+format; the ambiguity of library functions which are only partially compatible
+with the supported formats is confusing for clients. For this reason, the
+functions will be removed in the next major version of jsn.
+
+### Proplist format concerns
+
+It should be noted that the `proplist` format supported by jsn is compatible with
+the [abandoned](#encode-decode) [jsonx][jsonx] library, and is not compatible
+with the `proplist` format used in [jsx][jsx] and [jsone][jsone]. Specifically,
+jsn uses the empty list (`[]`) like [jsonx][jsonx] to represent an empty object,
+whereas [jsx][jsx] and [jsone][jsone] use an empty tuple in a list (`[{}]`) to
+represent empty objects. jsn is incompatible with this format. While the getter
+(`jsn:get/2,3`) functions are generally functional; most other library functions
+are not, and may result in unpredictable behaviors.
+
+### Edoc generation broken by map support
+
+the `edoc` make target (and using `rebar3 edoc`) are currently broken due to a
+parser problem triggered by the `IF_MAPS(...)` macro used to implement the
+`map` format in a backwards-compatible fashion. Edoc support will be restored
+when this problem is addressed in Erlang or the `map` backwards-compatibility
+constructions are removed from jsn in a future version.
 
 ## Roadmap
-
-### 1.1.0
-
-* **Add maps support** (Erlang 18+ only; Erlang 17 will not be supported). jsn
-  will still be compatible with existing Erlang versions, but the `map` format
-  will not be available.
-* **Deprecate Erlang 17 and lower**. This version of jsn will use conditionals
-  and macros to enable maps. These awkward constructions will be removed in a
-  future library update, which will necessitate the removal of support for
-  older Erlang versions.
-* **Deprecate `jsn:sort/1`, `jsn:sort_keys/1`, and `jsn:sort_equal/2`**. These
-  functions presume a key ordering, which is incompatible with the `map` format.
-  While they will remain in the library, their use is discouraged due to the
-  object format restriction.
 
 ### 1.1.1
 
@@ -67,7 +79,7 @@ for more information.
 ### 2.0.0
 
 * **Remove deprecated functions `jsn:sort/1`, `jsn:sort_keys/1`, and `jsn:sort_equal/2`**.
-* **Remove deprecated support for Erlang 17 and lower**. Full `maps` support will be
+* **Remove deprecated support for Erlang 17 and lower**. Full `map` support will be
   assumed by the code, and these older versions will no longer be able to
   compile jsn.
 * **Make `map` the default object format**. Maps are superior to proplists for
@@ -184,6 +196,12 @@ jsn:new([{'user.id', <<"123">>},
          {<<"user.name">>, <<"John">>}], [{format, struct}]).
 % {struct,[{<<"user">>,
 %           {struct,[{<<"id">>,<<"123">>},{<<"name">>,<<"John">>}]}}]}
+
+% create a jsn object in map format
+jsn:new([{'user.id', <<"123">>},
+         {<<"user.name">>, <<"John">>}], [{format, map}]).
+% #{<<"user">> =>
+%       #{<<"id">> => <<"123">>,<<"name">> => <<"John">>}}
 ```
 
 ### `get/2,3`, `get_list/2,3`, and `find/3,4` - Extract data from objects
@@ -418,9 +436,9 @@ future version of jsn (`2.x.x`). the [jsonx][jsonx] library that jsn uses for
 this functionality is abandoned, and users are strongly advised to use any of
 the many Erlang JSON libraries available:
 
-* [jiffy][jiffy] (`eep18` format)
-* [jsone][jsone] (`eep18`, `proplist` formats)
-* [jsx][jsx] (`proplist` format)
+* [jiffy][jiffy] (`eep18` and `map` formats)
+* [jsone][jsone] (`eep18`, `proplist`, and `map` formats)
+* [jsx][jsx] (`proplist` and `map` formats)
 * [mochijson2][mochijson2] (`struct` format)
 
 ### `equal/3,4` - Path-wise object comparison

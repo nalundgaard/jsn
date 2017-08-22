@@ -10,21 +10,28 @@
 %% jsn types
 %%=============================================================================
 
--type json_string()      :: binary().
--type json_key()         :: json_string() | atom().
--type json_number()      :: integer() | float().
--type json_boolean()     :: true | false.
--type json_null()        :: null.
--type json_array()       :: [json_term()].
--type json_array_index() :: first | last | pos_integer().
--type json_proplist()    :: [{json_key(), json_term()}].
--type json_eep18()       :: {json_proplist()}.
--type json_struct()      :: {struct, json_proplist()}.
--type json_object()      :: json_proplist() | json_eep18() | json_struct().
-
--type json_term()        :: json_string() | json_number() | json_array() |
-                            json_object() | json_null() | json_boolean().
-
+-type json_string()        :: binary().
+-type json_key()           :: json_string() | atom().
+-type json_number()        :: integer() | float().
+-type json_boolean()       :: true | false.
+-type json_null()          :: null.
+-type json_array()         :: [json_term()].
+-type json_no_map_array() ::  [json_no_map_term()].
+-type json_array_index()   :: first | last | pos_integer().
+-type json_proplist()      :: [{json_key(), json_term()}].
+-type json_eep18()         :: {json_proplist()}.
+-type json_struct()        :: {struct, json_proplist()}.
+-type json_no_map_object() :: json_proplist() | json_eep18() | json_struct().
+-ifdef(maps_support).
+-type json_map()           :: #{json_key() => json_term()}.
+-type json_object()        :: json_no_map_object() | json_map().
+-else.
+-type json_object()        :: json_no_map_object().
+-endif.
+-type json_no_map_term()   :: json_string() | json_number() | json_no_map_array() |
+                              json_null()   | json_boolean() | json_no_map_object().
+-type json_term()          :: json_string() | json_number() | json_array() |
+                              json_null()   | json_boolean() | json_object().
 
 %% JSN OPTIONS
 %%
@@ -32,14 +39,19 @@
 %% from scratch. Currently, the only option is format, which can be either:
 %% 
 %% * proplist (default)
+%% * map
 %% * eep18 (a.k.a EJSON) 
 %% * struct (mochijson2 format)
 %%
+-ifdef(maps_support).
+-type format()      :: map | proplist | eep18 | struct.
+-else.
 -type format()      :: proplist | eep18 | struct.
+-endif.
 -type jsn_option()  :: {format, format()}.
 -type jsn_options() :: [ jsn_option() ].
 
-%% A path is a either a list of json keys (representing nesting from left
+%% A path is either a list of json keys (representing nesting from left
 %% to right), a tuple of json keys and/or json array indexes (also nested
 %% left to right), or a single period-delimited binary/atom, where periods
 %% indicate nesting of keys; period-delimited binary/atom values are mapped
@@ -67,5 +79,12 @@
 -define(EMPTY_EEP18, {[]}).
 
 -define(EMPTY_STRUCT, {struct, []}).
+
+-ifdef(maps_support).
+-define(IF_MAPS(Expr), Expr).
+-define(EMPTY_MAP, #{}).
+-else.
+-define(IF_MAPS(_), ).
+-endif.
 
 -endif.
