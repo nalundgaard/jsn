@@ -2,17 +2,30 @@
 -module(jsn_tests).
 
 -ifdef(TEST).
--compile([export_all, debug_info]).
+-compile([export_all, nowarn_export_all, debug_info]).
 -include_lib("eunit/include/eunit.hrl").
 
 -include("jsn.hrl").
+
+%%==============================================================================
+%% random number compatibility
+%%==============================================================================
+
+-spec rand_uniform(Min :: integer(), Max :: integer()) -> integer().
+-ifdef(has_rand).
+rand_uniform(Min, Max) when Min =< Max ->
+    rand:uniform(Max - Min + 1) + Min - 1.
+-else.
+rand_uniform(Min, Max) when Min =< Max ->
+    crypto:rand_uniform(Min, Max).
+-endif.
 
 %%==============================================================================
 %% json object generation
 %%==============================================================================
 
 generate_json_object(Depth, Options) ->
-    PairNumber = crypto:rand_uniform(5, 10),
+    PairNumber = rand_uniform(5, 10),
     Pairs = [
         { generate_json_key(6), generate_json_value(Depth-1, Options)}
         || _ <- lists:seq(1,PairNumber)
@@ -22,7 +35,7 @@ generate_json_object(Depth, Options) ->
 
 generate_json_key(I) ->
     JsonString = generate_json_string(I),
-    case crypto:rand_uniform(1, 2) of
+    case rand_uniform(1, 2) of
         1 -> JsonString;
         2 -> binary_to_atom(JsonString, utf8)
     end.
@@ -31,9 +44,9 @@ generate_json_key(I) ->
 generate_json_string(I) ->
     Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
               "0123456789!@#$%^&*()_+-=[]{}/\\|<>,;'\"`",
-    Length = crypto:rand_uniform(1, I),
+    Length = rand_uniform(1, I),
     list_to_binary([
-        lists:nth(crypto:rand_uniform(1, length(Letters)), Letters)
+        lists:nth(rand_uniform(1, length(Letters)), Letters)
         || _ <- lists:seq(1,Length)
     ]).
 
@@ -42,7 +55,7 @@ generate_json_value(X, _Options) when X =< 0 ->
     generate_json_number();
 
 generate_json_value(Depth, Options) ->
-    case crypto:rand_uniform(1, 6) of
+    case rand_uniform(1, 6) of
         1 -> generate_json_object(Depth, Options);
         2 -> generate_json_array(Depth, Options);
         3 -> generate_json_string(6);
@@ -53,7 +66,7 @@ generate_json_value(Depth, Options) ->
 
 
 generate_json_array(Depth, Options) ->
-    Length = crypto:rand_uniform(0, 10),
+    Length = rand_uniform(0, 10),
     [ generate_json_value(Depth-1, Options) || _ <- lists:seq(1, Length) ].
 
 
@@ -62,17 +75,17 @@ generate_json_number() ->
 
 
 generate_json_number(N) ->
-    case crypto:rand_uniform(1, 2) of
-        1 -> crypto:rand_uniform(1, 2 * N) - N;
+    case rand_uniform(1, 2) of
+        1 -> rand_uniform(1, 2 * N) - N;
         2 ->
-            M = crypto:rand_uniform(1, 9999999999999),
-            crypto:rand_uniform(1, N * M) / (M)
+            M = rand_uniform(1, 9999999999999),
+            rand_uniform(1, N * M) / (M)
     end.
 
 
 generate_json_boolean() ->
     Values = ['true', 'false'],
-    lists:nth(crypto:rand_uniform(1, length(Values)), Values).
+    lists:nth(rand_uniform(1, length(Values)), Values).
 
 
 %%==============================================================================
