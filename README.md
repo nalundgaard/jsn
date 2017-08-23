@@ -42,6 +42,38 @@ most other library functions are not, and may result in unpredictable behaviors.
 jsn will no longer be supporting encoding and decoding. See [below](#encode-decode)
 for more information.
 
+## Roadmap
+
+### 1.1.0
+
+* **Add maps support** (Erlang 18+ only; Erlang 17 will not be supported). jsn
+  will still be compatible with existing Erlang versions, but the `map` format
+  will not be available.
+* **Deprecate Erlang 17 and lower**. This version of jsn will use conditionals
+  and macros to enable maps. These awkward constructions will be removed in a
+  future library update, which will necessitate the removal of support for
+  older Erlang versions.
+* **Deprecate `jsn:sort/1`, `jsn:sort_keys/1`, and `jsn:sort_equal/2`**. These
+  functions presume a key ordering, which is incompatible with the `map` format.
+  While they will remain in the library, their use is discouraged due to the
+  object format restriction.
+
+### 1.1.1
+
+* **Introduce a `jsx_proplist` format**. This will support [jsx][jsx] and
+  [jsone][jsone] compatible object creation; the library will also be updated to
+  support this format in getters and other library functions.
+
+### 2.0.0
+
+* **Remove deprecated functions `jsn:sort/1`, `jsn:sort_keys/1`, and `jsn:sort_equal/2`**.
+* **Remove deprecated support for Erlang 17 and lower**. Full `maps` support will be
+  assumed by the code, and these older versions will no longer be able to
+  compile jsn.
+* **Make `map` the default object format**. Maps are superior to proplists for
+  JSON object representation in Erlang, and will be favored primarily by the
+  library.
+
 ## Running 
 
 To run this library locally, build the source code:
