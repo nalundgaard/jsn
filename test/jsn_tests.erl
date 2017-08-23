@@ -2,7 +2,7 @@
 -module(jsn_tests).
 
 -ifdef(TEST).
--compile([export_all, nowarn_export_all, debug_info]).
+-compile([export_all]).
 -include_lib("eunit/include/eunit.hrl").
 
 -include("jsn.hrl").
