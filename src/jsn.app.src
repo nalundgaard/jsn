@@ -9,6 +9,7 @@
     {description, "Utilities for interacting with decoded JSON in erlang"},
     {vsn, git},
     {applications, [kernel,
-                    stdlib]}
+                    stdlib,
+                    jsonx]}
  ]}.
 % vim:ft=erlang
