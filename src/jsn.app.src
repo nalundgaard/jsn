@@ -1,15 +1,11 @@
-%%------------------------------------------------------------------------------
-%% @doc jsn
-%%
-%% OTP Application Definition
-%%
-%% @author Nicholas Lundgaard <nlundgaard@alertlogic.com>
-%%------------------------------------------------------------------------------
 {application, jsn, [
     {description, "Utilities for interacting with decoded JSON in erlang"},
-    {vsn, git},
+    {vsn, "1.0.3"}, %% <- need to set this appropriately when publishing to hex.pm
     {applications, [kernel,
                     stdlib,
-                    jsonx]}
+                    jsonx]},
+    {maintainers, ["Nicholas Lundgaard", "Mark Allen"]},
+    {licenses, ["Apache 2"]},
+    {links, [{"Github", "https://github.com/nalundgaard/jsn"}]}
  ]}.
 % vim:ft=erlang
