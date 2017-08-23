@@ -1,5 +1,4 @@
-jsn
-===
+# jsn
 
 [![Build Status](https://secure.travis-ci.org/nalundgaard/jsn.png?branch=master)](http://travis-ci.org/nalundgaard/jsn)
 
@@ -7,12 +6,12 @@ jsn is a tool for working with JSON representations in erlang--complex, nested
 JSON objects in particular.
 
 In the spirit of [ej][ej], it supports the common formats output by JSON
-decoders such as [jsonx][jsonx], [jiffy][jiffy], and [mochijson2][mochijson2].
+decoders such as [jsone][jsone], [jiffy][jiffy], and [mochijson2][mochijson2].
 Unlike [ej][ej], however, it supports _all three_ common JSON representations
 in Erlang:
 
 * `proplist` (**default**)(common to [jsx][jsx] and [jsonx][jsonx])
-* `eep18` (common to [jiffy][jiffy] and [jsonx][jsonx])
+* `eep18` (common to [jiffy][jiffy], [jsone][jsone], and [jsonx][jsonx])
 * `struct` (common to [mochijson2][mochijson2]) 
 
 In addition to supporting the additional `proplist` format, jsn's path
@@ -26,8 +25,24 @@ support for the 'syntactic sugar' of the period-delimited keys. However, a
 need arose for the library to be proplist-compatible, so it has been refactored
 to be a nearly standalone library.
 
-Running 
--------
+## Caveats & known issues
+
+### Proplist format concerns
+
+It should be noted that the `proplist` format supported by jsn is [jsonx][jsonx]
+compatible, and has a minor incompatibility with the comparable formats in
+[jsx][jsx] and [jsone][jsone]. jsn uses the empty list (`[]`) like [jsonx][jsonx]
+to represent an empty object, whereas [jsx][jsx] and [jsone][jsone] use an empty
+tuple in a list (`[{}]`) to represent empty objects. jsn is incompatible with
+this format. While the getter (`jsn:get/2,3`) functions are generally functional;
+most other library functions are not, and may result in unpredictable behaviors.
+
+### Deprecated: encoding and decoding
+
+jsn will no longer be supporting encoding and decoding. See [below](#encode-decode)
+for more information.
+
+## Running 
 
 To run this library locally, build the source code:
 
@@ -41,10 +56,10 @@ Then start an erlang shell:
 make start
 ```
 
-jsn is an OTP library, and does not really need to be started as such. 
+jsn is an OTP library, and does not really need to be started as such.
 
-Application Integration
------------------------
+## Application integration
+
 
 To add `jsn` to your Erlang OTP application, simply add it to your
 `rebar.config`:
@@ -52,16 +67,28 @@ To add `jsn` to your Erlang OTP application, simply add it to your
 ```erlang
 {deps, [
     %% ... your deps ...
-    {jsn, "", {git, "git@github.com:nalundgaard/jsn.git", {branch, master}}}
-
+    {jsn, {git, "https://github.com/nalundgaard/jsn.git", {branch, master}}}
 ]}.
 ```
 
-After you get and compile deps, you will have full access to jsn from your
-local console.
+and your applications `src/<application>.app.src` or `ebin/<application>.app`
+file:
 
-Paths & Indexes
----------------
+```erlang
+{application, <application>, [
+    {description, "An application that uses nested JSON interaction"},
+    {applications, [
+        kernel,
+        stdlib,
+        %% ... your deps ...
+        jsn
+    ]}
+]}
+```
+
+After you re-compile, you will have full access to jsn from your local console.
+
+## Paths & indexes
 
 Paths are pointers into a (potentially nested) jsn object. An object may contain
 sub-objects or arrays at any layer, and as such, a path may include both keys
@@ -83,8 +110,7 @@ There are 3 different supported path styles, each with different tradeoffs:
    This format is the most compact and readable, but only supports keys
    (no array indexes).
 
-Library Functions
------------------
+## Library functions
 
 jsn provides functions to create, append, delete, and transform objects in all
 supported formats (`proplist`, `eep18`, and `struct`). This section contains a
@@ -313,7 +339,7 @@ jsn:delete_if_equal('company.location', SecretLocations, Company).
 %       {<<"position">>,<<"CTO">>}]]}]}]
 ```
 
-### `copy/3,4` and `transform/2` - Re-shaping existing objects.
+### `copy/3,4` and `transform/2` - Re-shaping existing objects
 
 * `copy(PathList, Src, Dst)` - Given a list of paths, a source object, and one
   or more destination objects, copy the paths and values from Src to the
@@ -353,35 +379,17 @@ jsn:transform([{key1, T1},{key2, T1},{key4, T1}], NewDestination).
 %  {<<"key2">>,<<"2">>}]
 ```
 
-### `encode/1` and `decode/1,2` - Encoding/decoding JSON for interaction with jsn
+### <a name="encode-decode"></a>`encode/1` and `decode/1,2` - Encoding/decoding JSON for interaction with jsn
 
-jsn features convenience functions for encoding to and decoding from JSON.
-These functions are thin wrappers around [jsonx][jsonx], which supports
-decoding into all three jsn-supported formats (`proplist`, `eep18`, `struct`).
+**NOTE**: encoding and decoding are **deprecated**, and will be removed in a
+future version of jsn (`2.x.x`). the [jsonx][jsonx] library that jsn uses for
+this functionality is abandoned, and users are strongly advised to use any of
+the many Erlang JSON libraries available:
 
-* `encode(Object)` - Encode the given object (in any supported format)
-  as a binary string.
-* `decode(Json)` - Decode the given binary string into a jsn object, in the
-  default proplist format.
-* `decode(Json, Options)` - Decode the given binary string into a json object,
-  in the specified format.
-
-Examples:
-
-```erlang
-Json = <<"{\"key\": {\"inner_key\":\"value\"}}">>.
-% <<"{\"key\": {\"inner_key\":\"value\"}}">>
-
-Proplist = jsn:decode(Json).
-% [{<<"key">>,[{<<"inner_key">>,<<"value">>}]}]
-
-Eep18 = jsn:decode(Json, [{format, eep18}]).
-% {[{<<"key">>,{[{<<"inner_key">>,<<"value">>}]}}]}
-
-Struct = jsonx:decode(Json, [{format, struct}]).
-% {struct,[{<<"key">>,
-%           {struct,[{<<"inner_key">>,<<"value">>}]}}]}
-```
+* [jiffy][jiffy] (`eep18` format)
+* [jsone][jsone] (`eep18`, `proplist` formats)
+* [jsx][jsx] (`proplist` format)
+* [mochijson2][mochijson2] (`struct` format)
 
 ### `equal/3,4` - Path-wise object comparison
 
@@ -498,6 +506,7 @@ jsn:is_subset(Object3, Object1).
 [kvc]: https://github.com/etrepum/kvc
 [erlson]: https://github.com/alavrik/erlson
 [jsx]: https://github.com/talentdeficit/jsx
+[jsone]: https://github.com/sile/jsone
 [jsonx]: https://github.com/iskra/jsonx
 [jiffy]: https://github.com/davisp/jiffy
 [mochijson2]: https://github.com/mochi/mochiweb/blob/master/src/mochijson2.erl

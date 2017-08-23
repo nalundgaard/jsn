@@ -30,7 +30,7 @@
 -export([sort_equal/2]).
 -export([is_equal/2]).
 -export([is_subset/2]).
-%% JSON encode/decode
+%% DEPRECATED: JSON encode/decode
 -export([encode/1, decode/1, decode/2]).
 %% object format conversion
 -export([as_proplist/1, from_proplist/1, from_proplist/2]).
@@ -530,6 +530,7 @@ is_subset(_A, _B) ->
 -spec encode(json_term()) -> Json :: binary().
 %%------------------------------------------------------------------------------
 %% @doc encode a json_term into a JSON binary string
+%% @deprecated Please use jiffy, jsone, or jsx instead.
 %%------------------------------------------------------------------------------
 encode(Object) ->
     try jsonx:encode(Object) of
@@ -543,6 +544,7 @@ encode(Object) ->
 -spec decode(Json :: iolist()) -> json_term().
 %%------------------------------------------------------------------------------
 %% @doc decode a JSON string into a json_term
+%% @deprecated Please use jiffy, jsone, or jsx instead.
 %%------------------------------------------------------------------------------
 decode(Json) ->
     decode(Json, []).
@@ -551,6 +553,7 @@ decode(Json) ->
 -spec decode(Json :: iolist(), jsn_options()) -> json_term().
 %%------------------------------------------------------------------------------
 %% @doc decode a JSON string into a jsn object using the given options
+%% @deprecated Please use jiffy, jsone, or jsx instead.
 %%------------------------------------------------------------------------------
 decode(Json, Options) when is_list(Json) ->
     decode(list_to_binary(Json), Options);
