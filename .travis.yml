@@ -11,4 +11,7 @@ script:
   - ./rebar3 compile 
   - ./rebar3 eunit
   - ./rebar3 xref
-  - ./rebar3 edoc
+# maps support breaks edoc generation
+# TODO reinstate edoc generation with
+# jsn 2.0.0
+#  - ./rebar3 edoc
