@@ -10,7 +10,7 @@ decoders such as [jsone][jsone], [jiffy][jiffy], and [mochijson2][mochijson2].
 Unlike [ej][ej], however, it supports _all three_ common JSON representations
 in Erlang:
 
-* `proplist` (**default**)(common to [jsx][jsx] and [jsonx][jsonx])
+* `proplist` (**default**)(used by [jsonx][jsonx])
 * `map` (common to [jsone][jsone], [jiffy][jiffy], and [jsx][jsx])
 * `eep18` (common to [jiffy][jiffy], [jsone][jsone], and [jsonx][jsonx])
 * `struct` (common to [mochijson2][mochijson2])
@@ -56,9 +56,18 @@ the [abandoned](#encode-decode) [jsonx][jsonx] library, and is not compatible
 with the `proplist` format used in [jsx][jsx] and [jsone][jsone]. Specifically,
 jsn uses the empty list (`[]`) like [jsonx][jsonx] to represent an empty object,
 whereas [jsx][jsx] and [jsone][jsone] use an empty tuple in a list (`[{}]`) to
-represent empty objects. jsn is incompatible with this format. While the getter
-(`jsn:get/2,3`) functions are generally functional; most other library functions
-are not, and may result in unpredictable behaviors.
+represent an empty object.
+
+[jsx][jsx] and [jsone][jsone] use this representation to disambiguate empty JSON
+objects from empty arrays, which cannot be distinguished in the [jsonx][jsonx]
+`proplist` format used by jsn. jsn is incompatible with this format. While the
+getter (`jsn:get/2,3`) functions are generally functional, most other library
+functions are not, and may result in unpredictable behaviors.
+
+jsn does not plan to support a [jsx][jsx] and [jsone][jsone] compatible
+`proplist` format; long-term, clients are strongly encouraged to use the `map`
+format instead. It a vastly more performant data structure that maps naturally
+to JSON objects without ambiguity.
 
 ### Edoc generation broken by map support
 
@@ -69,12 +78,6 @@ when this problem is addressed in Erlang or the `map` backwards-compatibility
 constructions are removed from jsn in a future version.
 
 ## Roadmap
-
-### 1.1.1
-
-* **Introduce a `jsx_proplist` format**. This will support [jsx][jsx] and
-  [jsone][jsone] compatible object creation; the library will also be updated to
-  support this format in getters and other library functions.
 
 ### 2.0.0
 
