@@ -70,6 +70,18 @@
 -type path_element() ::  binary() | json_array_index().
 -type path_elements() :: [ path_element() ].
 
+%% Select conditions
+%%
+%% Select conditions are passed to the select/2 function for filtering
+%% lists of jsn objects
+
+-type value_selection() :: {value, path()} | {value, path(), Default :: term()}.
+-type selection() :: identity | value_selection() | [value_selection()].
+-type condition() :: {path(), Value :: json_term()} | %% exact match syntactic sugar
+                     {path(), fun((Value :: json_term()) -> boolean())} | %% boolean function with input of the value at the path
+                     fun((Element :: json_term()) -> boolean()). %% boolean function that takes a whole array element
+-type conditions() :: [condition()].
+
 %%=============================================================================
 %% jsn constants
 %%=============================================================================

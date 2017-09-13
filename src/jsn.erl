@@ -23,6 +23,8 @@
     path_transform/2,
     path_elements/1
 ]).
+%% select API
+-export([select/2, select/3]).
 %% comparison functions
 -export([equal/3, equal/4]).
 -export([is_equal/2]).
@@ -354,6 +356,71 @@ path_elements(tuple, [Index | Rest], Acc) when is_integer(Index), Index > 0 ->
 path_elements(tuple, [Index | Rest], Acc) when Index =:= first; Index =:= last ->
     path_elements(tuple, Rest, [Index | Acc]);
 path_elements(_Type, _Path, _Acc) -> erlang:error(badarg).
+
+
+%%==============================================================================
+%% select API
+%%==============================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc Transforms a list of Elements according to a given OutputSpecification
+%%------------------------------------------------------------------------------
+-spec select(selection(), json_array()) -> json_array().
+select(OutputSpec, Elements) when is_list(Elements) ->
+    select(OutputSpec, [], Elements);
+select(_OutpuSpec, _Elements) ->
+    erlang:error(badarg).
+
+%%------------------------------------------------------------------------------
+%% @doc Same as select/2 but it first filters the elements according to a given
+%% list of Conditions
+%%------------------------------------------------------------------------------
+-spec select(selection(), conditions(), json_array()) -> json_array().
+select(OutputSpec, Conditions, Elements) when is_list(Elements) ->
+    %% ensures Conditions are a list
+    ConditionList =
+        case Conditions of
+            _ when is_list(Conditions) -> Conditions;
+            _ -> [Conditions]
+        end,
+    %% This function applies a single condition to a single element
+    ApplyConditionFun = 
+        fun({Path, FilterFun}, E) when is_function(FilterFun) ->
+                erlang:apply(FilterFun, [?MODULE:get(Path, E)]);
+           ({Path, Value}, E) ->
+                ?MODULE:get(Path, E) == Value;
+           (FilterFun, E) when is_function(FilterFun) ->
+                erlang:apply(FilterFun, [E]);
+           (_, _) ->
+                erlang:error(badarg)
+        end,
+    FilteredElements =
+        lists:foldl(fun(Condition, CurrentElements) ->
+                        lists:filter(fun(E) ->
+                                        erlang:apply(ApplyConditionFun, [Condition, E])
+                                    end, CurrentElements)
+                    end, Elements, ConditionList),
+    %% Converts Filtered Elements by applying output specifications
+    OutputFun =
+        case OutputSpec of
+            identity ->
+                fun(E) -> E end;
+            {value, Path} ->
+                fun(E) -> ?MODULE:get(Path, E) end;
+            {value, Path, Default} ->
+                fun(E) -> ?MODULE:get(Path, E, Default) end;
+            _ when is_list(OutputSpec) ->
+                fun(E) ->
+                    lists:map(fun({value, Path}) -> ?MODULE:get(Path, E);
+                                 ({value, Path, Default}) -> ?MODULE:get(Path, E, Default)
+                              end, OutputSpec)
+                end;
+            _ ->
+                erlang:error(badarg)
+        end,
+    lists:map(OutputFun, FilteredElements);
+select(_OutpuSpec, _Conditions, _Elements) ->
+    erlang:error(badarg).
 
 
 %%==============================================================================

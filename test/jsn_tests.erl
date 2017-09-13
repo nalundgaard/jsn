@@ -499,6 +499,32 @@ path_elements_test_() ->
      ?_assertError(badarg, jsn:path_elements(0)),
      ?_assertError(badarg, jsn:path_elements([10, <<"foo">>]))].
 
+select_test_() ->
+    Alice = jsn:new([{<<"username">>, <<"Alice">>}, {<<"created.by">>, <<"Dana">>},     {<<"created.at">>, 1503702360}]),
+    Bob   = jsn:new([{<<"username">>, <<"Bob">>},   {<<"created.by">>, <<"Eve">>},      {<<"created.at">>, 1503702417}]),
+    Carl  = jsn:new([{<<"username">>, <<"Carl">>},  {<<"created.by">>, <<"Frank">>},    {<<"created.at">>, 1503702417}]),
+    None  = jsn:new([                               {<<"created.by">>, <<"Gretchen">>}, {<<"created.at">>, 1503704439}]),
+    Objects = [Alice, Bob, Carl, None],
+    [?_assertEqual([<<"Alice">>, <<"Bob">>, <<"Carl">>, undefined],
+                   jsn:select({value, <<"username">>}, Objects)),
+     ?_assertEqual([<<"Alice">>],
+                   jsn:select({value, <<"username">>},
+                              [{<<"created.at">>, fun(V) -> V < 1503702416 end},
+                               fun(E) -> jsn:get(<<"created.by">>, E) == <<"Dana">> end],
+                              Objects)),
+     ?_assertEqual([[<<"Bob">>, <<"Eve">>], [<<"Carl">>, <<"Frank">>]],
+                   jsn:select([{value, <<"username">>, <<"No Name">>},
+                               {value, {<<"created">>, <<"by">>}}],
+                              [{<<"created.at">>, 1503702417}],
+                              Objects)),
+     ?_assertEqual([None],
+                   jsn:select(identity, [{<<"username">>, undefined}], Objects)),
+     ?_assertEqual([<<"No Name">>],
+                   jsn:select({value, <<"username">>, <<"No Name">>},
+                              [{<<"username">>, undefined}],
+                              Objects))
+    ].
+
 
 sort_test_() ->
     Proplist = [{c, [{z, 1},{x, 2}]},
