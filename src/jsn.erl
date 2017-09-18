@@ -15,6 +15,7 @@
     get/2, get/3,
     get_list/2, get_list/3,
     find/3, find/4,
+    select/2, select/3,
     set/3, set_list/2,
     delete/2, delete_list/2,
     delete_if_equal/3,
@@ -23,8 +24,6 @@
     path_transform/2,
     path_elements/1
 ]).
-%% select API
--export([select/2, select/3]).
 %% comparison functions
 -export([equal/3, equal/4]).
 -export([is_equal/2]).
@@ -173,6 +172,35 @@ find(Path, Value, Objects) ->
 find(Path, Subpath, SearchTerm, Object) ->
     find(Subpath, SearchTerm, get(Path, Object)).
 
+
+-spec select(selection()|selections(), json_array()) -> json_array().
+%%------------------------------------------------------------------------------
+%% @doc Transforms a list of Elements according to a given Selectionification
+%%------------------------------------------------------------------------------
+select(Selection, Elements) when is_list(Elements) ->
+    select(Selection, [], Elements);
+select(_Selection, _Elements) ->
+    erlang:error(badarg).
+
+
+-spec select(selection()|selections(),
+             condition()|conditions(),
+             json_array()) -> json_array().
+%%------------------------------------------------------------------------------
+%% @doc Same as select/2 but it first filters the elements according to a given
+%% list of Conditions
+%%------------------------------------------------------------------------------
+select(Selection, Condition, Elements) when is_list(Elements) ->
+    lists:filtermap(fun(Element) ->
+        case apply_condition(Condition, Element) of
+            true ->
+                {true, apply_selection(Selection, Element)};
+            false ->
+                false
+        end
+    end, Elements);
+select(_Selection, _Conditions, _Elements) ->
+    erlang:error(badarg).
 
 -spec set(path(), json_object(), Value :: json_term()) -> json_object();
          (path(), json_array(), Value :: json_term()) -> json_array().
@@ -356,71 +384,6 @@ path_elements(tuple, [Index | Rest], Acc) when is_integer(Index), Index > 0 ->
 path_elements(tuple, [Index | Rest], Acc) when Index =:= first; Index =:= last ->
     path_elements(tuple, Rest, [Index | Acc]);
 path_elements(_Type, _Path, _Acc) -> erlang:error(badarg).
-
-
-%%==============================================================================
-%% select API
-%%==============================================================================
-
-%%------------------------------------------------------------------------------
-%% @doc Transforms a list of Elements according to a given OutputSpecification
-%%------------------------------------------------------------------------------
--spec select(selection(), json_array()) -> json_array().
-select(OutputSpec, Elements) when is_list(Elements) ->
-    select(OutputSpec, [], Elements);
-select(_OutpuSpec, _Elements) ->
-    erlang:error(badarg).
-
-%%------------------------------------------------------------------------------
-%% @doc Same as select/2 but it first filters the elements according to a given
-%% list of Conditions
-%%------------------------------------------------------------------------------
--spec select(selection(), conditions(), json_array()) -> json_array().
-select(OutputSpec, Conditions, Elements) when is_list(Elements) ->
-    %% ensures Conditions are a list
-    ConditionList =
-        case Conditions of
-            _ when is_list(Conditions) -> Conditions;
-            _ -> [Conditions]
-        end,
-    %% This function applies a single condition to a single element
-    ApplyConditionFun = 
-        fun({Path, FilterFun}, E) when is_function(FilterFun) ->
-                erlang:apply(FilterFun, [?MODULE:get(Path, E)]);
-           ({Path, Value}, E) ->
-                ?MODULE:get(Path, E) == Value;
-           (FilterFun, E) when is_function(FilterFun) ->
-                erlang:apply(FilterFun, [E]);
-           (_, _) ->
-                erlang:error(badarg)
-        end,
-    FilteredElements =
-        lists:foldl(fun(Condition, CurrentElements) ->
-                        lists:filter(fun(E) ->
-                                        erlang:apply(ApplyConditionFun, [Condition, E])
-                                    end, CurrentElements)
-                    end, Elements, ConditionList),
-    %% Converts Filtered Elements by applying output specifications
-    OutputFun =
-        case OutputSpec of
-            identity ->
-                fun(E) -> E end;
-            {value, Path} ->
-                fun(E) -> ?MODULE:get(Path, E) end;
-            {value, Path, Default} ->
-                fun(E) -> ?MODULE:get(Path, E, Default) end;
-            _ when is_list(OutputSpec) ->
-                fun(E) ->
-                    lists:map(fun({value, Path}) -> ?MODULE:get(Path, E);
-                                 ({value, Path, Default}) -> ?MODULE:get(Path, E, Default)
-                              end, OutputSpec)
-                end;
-            _ ->
-                erlang:error(badarg)
-        end,
-    lists:map(OutputFun, FilteredElements);
-select(_OutpuSpec, _Conditions, _Elements) ->
-    erlang:error(badarg).
 
 
 %%==============================================================================
@@ -722,6 +685,38 @@ from_proplist(X, _Options) -> X.
 %%==============================================================================
 %% internal functions
 %%==============================================================================
+
+-spec apply_condition(condition()|conditions(), json_term()) -> boolean().
+apply_condition({Path, ConditionFun}, Element) when is_function(ConditionFun, 1) ->
+    ConditionFun(get(Path, Element));
+apply_condition({Path, Value}, Element) ->
+    get(Path, Element) == Value;
+apply_condition(ConditionFun, Element) when is_function(ConditionFun, 1) ->
+    ConditionFun(Element);
+apply_condition([Condition|Rest], Element) ->
+    case apply_condition(Condition, Element) of
+        true ->
+            apply_condition(Rest, Element);
+        false ->
+            false
+    end;
+apply_condition([], _Element) ->
+    true;
+apply_condition(_, _) ->
+    erlang:error(invalid_condition).
+
+
+-spec apply_selection(selection()|selections(), json_term()) -> term().
+apply_selection(identity, Element) ->
+    Element;
+apply_selection({value, Path}, Element) ->
+    get(Path, Element);
+apply_selection({value, Path, Default}, Element) ->
+    get(Path, Element, Default);
+apply_selection(Selections, Element) when is_list(Selections) ->
+    [apply_selection(Selection, Element) || Selection <- Selections];
+apply_selection(_, _) ->
+    erlang:error(invalid_output_spec).
 
 
 -spec get_format(jsn_options()) -> format().
