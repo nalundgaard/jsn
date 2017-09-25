@@ -192,15 +192,16 @@ select(_Selection, _Elements) ->
 %%------------------------------------------------------------------------------
 select(Selection, Condition, Elements) when is_list(Elements) ->
     lists:filtermap(fun(Element) ->
-        case apply_condition(Condition, Element) of
+        case apply_conditions(Condition, Element) of
             true ->
-                {true, apply_selection(Selection, Element)};
+                {true, apply_selections(Selection, Element)};
             false ->
                 false
         end
     end, Elements);
 select(_Selection, _Conditions, _Elements) ->
     erlang:error(badarg).
+
 
 -spec set(path(), json_object(), Value :: json_term()) -> json_object();
          (path(), json_array(), Value :: json_term()) -> json_array().
@@ -686,37 +687,45 @@ from_proplist(X, _Options) -> X.
 %% internal functions
 %%==============================================================================
 
--spec apply_condition(condition()|conditions(), json_term()) -> boolean().
+-spec apply_conditions(conditions(), json_term()) -> boolean().
+apply_conditions([Condition|Rest], Element) ->
+    case apply_condition(Condition, Element) of
+        true ->
+            apply_conditions(Rest, Element);
+        false ->
+            false
+    end;
+apply_conditions([], _Element) ->
+    true;
+apply_conditions(Condition, Element) ->
+    apply_condition(Condition, Element).
+
+-spec apply_condition(condition(), json_term()) -> boolean().
 apply_condition({Path, ConditionFun}, Element) when is_function(ConditionFun, 1) ->
     ConditionFun(get(Path, Element));
 apply_condition({Path, Value}, Element) ->
     get(Path, Element) == Value;
 apply_condition(ConditionFun, Element) when is_function(ConditionFun, 1) ->
     ConditionFun(Element);
-apply_condition([Condition|Rest], Element) ->
-    case apply_condition(Condition, Element) of
-        true ->
-            apply_condition(Rest, Element);
-        false ->
-            false
-    end;
-apply_condition([], _Element) ->
-    true;
 apply_condition(_, _) ->
     erlang:error(invalid_condition).
 
 
--spec apply_selection(selection()|selections(), json_term()) -> term().
+-spec apply_selections(selections(), json_term()) -> term().
+apply_selections(Selections, Element) when is_list(Selections) ->
+    [apply_selection(Selection, Element) || Selection <- Selections];
+apply_selections(Selection, Element) ->
+    apply_selection(Selection, Element).
+
+-spec apply_selection(selection(), json_term()) -> term().
 apply_selection(identity, Element) ->
     Element;
 apply_selection({value, Path}, Element) ->
     get(Path, Element);
 apply_selection({value, Path, Default}, Element) ->
     get(Path, Element, Default);
-apply_selection(Selections, Element) when is_list(Selections) ->
-    [apply_selection(Selection, Element) || Selection <- Selections];
 apply_selection(_, _) ->
-    erlang:error(invalid_output_spec).
+    erlang:error(invalid_selection).
 
 
 -spec get_format(jsn_options()) -> format().

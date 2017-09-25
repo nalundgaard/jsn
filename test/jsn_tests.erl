@@ -522,7 +522,11 @@ select_test_() ->
      ?_assertEqual([<<"No Name">>],
                    jsn:select({value, <<"username">>, <<"No Name">>},
                               [{<<"username">>, undefined}],
-                              Objects))
+                              Objects)),
+     ?_assertError(invalid_selection,
+                   jsn:select(random_invalid_selection, [{<<"username">>, undefined}], Objects)),
+     ?_assertError(invalid_condition,
+                   jsn:select({value, <<"username">>, <<"No Name">>}, random_invalid_condition, Objects))
     ].
 
 
