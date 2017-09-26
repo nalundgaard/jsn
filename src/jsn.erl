@@ -282,8 +282,8 @@ copy(PathList, Src, Dst, Mutate) when is_list(PathList),
               Dst);
 copy(PathList, Src, Dst, Mutator) when not(is_list(Dst)) ->
     copy(PathList, Src, [Dst], Mutator);
-copy(_PathList, _Src, _Dst, _Mutator) ->
-    erlang:error(badarg).
+copy(PathList, Src, Dst, Mutator) ->
+    erlang:error(badarg, [PathList, Src, Dst, Mutator]).
 
 
 -spec transform(Transforms :: [{path(), fun((json_term()) -> json_term())}],
@@ -340,7 +340,7 @@ path_elements(Path) when is_list(Path) ->
     path_elements(list, lists:reverse(Path), []);
 path_elements(Path) when is_tuple(Path) ->
     path_elements(tuple, lists:reverse(tuple_to_list(Path)), []);
-path_elements(_Path) -> erlang:error(badarg).
+path_elements(Path) -> erlang:error(badarg, [Path]).
 
 
 path_elements(_Type, [], Acc) ->
@@ -353,7 +353,8 @@ path_elements(tuple, [Index | Rest], Acc) when is_integer(Index), Index > 0 ->
     path_elements(tuple, Rest, [Index | Acc]);
 path_elements(tuple, [Index | Rest], Acc) when Index =:= first; Index =:= last ->
     path_elements(tuple, Rest, [Index | Acc]);
-path_elements(_Type, _Path, _Acc) -> erlang:error(badarg).
+path_elements(Type, Path, Acc) ->
+    erlang:error(badarg, [Type, Path, Acc]).
 
 
 %%==============================================================================
@@ -668,7 +669,8 @@ get_format(Options) ->
         {_, eep18}        -> eep18;
         {_, struct}       -> struct;
         false             -> ?DEFAULT_FORMAT;
-        _ -> erlang:error(badarg)
+        _ ->
+            erlang:error(badarg, [Options])
     end.
 
 
