@@ -1,6 +1,6 @@
 {application, jsn, [
     {description, "Utilities for interacting with decoded JSON in erlang"},
-    {vsn, "1.1.0"}, %% <- need to set this appropriately when publishing to hex.pm
+    {vsn, "1.2.0"}, %% <- need to set this appropriately when publishing to hex.pm
     {applications, [kernel,
                     stdlib,
                     jsonx]},
