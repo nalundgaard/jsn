@@ -177,11 +177,8 @@ find(Path, Subpath, SearchTerm, Object) ->
 %%------------------------------------------------------------------------------
 %% @doc Transforms a list of Elements according to a given Selectionification
 %%------------------------------------------------------------------------------
-select(Selection, Elements) when is_list(Elements) ->
-    select(Selection, [], Elements);
-select(_Selection, _Elements) ->
-    erlang:error(badarg).
-
+select(Selection, Elements) ->
+    select(Selection, [], Elements).
 
 -spec select(selection()|selections(),
              condition()|conditions(),
@@ -199,8 +196,8 @@ select(Selection, Condition, Elements) when is_list(Elements) ->
                 false
         end
     end, Elements);
-select(_Selection, _Conditions, _Elements) ->
-    erlang:error(badarg).
+select(Selection, Conditions, Elements) ->
+    erlang:error(badarg, [Selection, Conditions, Elements]).
 
 
 -spec set(path(), json_object(), Value :: json_term()) -> json_object();
@@ -707,8 +704,8 @@ apply_condition({Path, Value}, Element) ->
     get(Path, Element) == Value;
 apply_condition(ConditionFun, Element) when is_function(ConditionFun, 1) ->
     ConditionFun(Element);
-apply_condition(_, _) ->
-    erlang:error(invalid_condition).
+apply_condition(Condition, Element) ->
+    erlang:error(badarg, [Condition, Element]).
 
 
 -spec apply_selections(selections(), json_term()) -> term().
@@ -724,8 +721,8 @@ apply_selection({value, Path}, Element) ->
     get(Path, Element);
 apply_selection({value, Path, Default}, Element) ->
     get(Path, Element, Default);
-apply_selection(_, _) ->
-    erlang:error(invalid_selection).
+apply_selection(Selection, Element) ->
+    erlang:error(badarg, [Selection, Element]).
 
 
 -spec get_format(jsn_options()) -> format().
