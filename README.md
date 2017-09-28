@@ -172,7 +172,7 @@ reference for the primary library functions available.
 * `new(TupleOrTupleList, Options)` - Identical to new/1, but with the addition
   of Options, which allow passing a specific format.
 
-Examples:
+#### Examples
 
 ```erlang
 % create an empty object
@@ -207,7 +207,7 @@ jsn:new([{'user.id', <<"123">>},
 %       #{<<"id">> => <<"123">>,<<"name">> => <<"John">>}}
 ```
 
-### `get/2,3`, `get_list/2,3`, and `find/3,4` - Extract data from objects
+### `get/2,3`, `get_list/2,3`, `find/3,4`, and `select/2,3` - Extract data from objects
 
 * `get(Path, Object)` - Return the value at Path in the Object, or `undefined`
   if it is missing.
@@ -222,8 +222,44 @@ jsn:new([{'user.id', <<"123">>},
 * `find(Path, SubPath, SearchTerm, Object)` - Get the Path from the given
   Object (should be a list of objects), and find all the elements in the list
   where the given SubPath in the element matches SearchTerm, and return them.
+* `select(Selection, Objects)` - Apply the given selection(s) to the `Objects`
+  list, returning a list of selection results correspondent to the given list.
+  See [below](#selections-conditions) for more information about `Selections`.
+* `select(Selection, Conditions, Objects)` - Apply the given condition(s) and
+  selection(s) to the `Objects` list, returning a list of selection results
+  correspondent to the given list, with elements that do not meet the given
+  conditions filtered out. See [below](#selections-conditions) for more
+  information about `Selections` and `Conditions`.
 
-Examples:
+#### <a name="selections-conditions"/>Selections and Conditions in `select/2,3`
+
+The functions `select/2` and `select/3` accept selection and conditional
+specifications defined in [jsn.hrl](include/jsn.hrl).
+
+`Selections` can be passed singularly or as a list in `select/2` and
+`select/3`. If it is passed as a list of selections, the output result from
+the `select` call will contain a symmetrically ordered list of results for
+each element in the input list. A `Selection` is one of the following:
+
+* `{value, Path}` - select the value at the given path, or `undefined` if
+  it is missing
+* `{value, Path, Default}` - select the value at the given path, or `Default`
+  if it is missing
+* `identity` - select the whole object
+
+`Conditions` can be passed singularly or as a list in `select/3`. A `Conditioon`
+is one of the following:
+
+* {Path, Value} - include an element if the value at the given `Path` in the
+  element is equivalent to the given `Value`.
+* `{Path, fun((Value) -> Boolean)}` - include an element if the given function
+  returns `true` with the input of the value at the given `Path`
+* `fun((Element) -> Boolean)` - include an element if the given function
+  returns `true` with the input of the whole element.
+
+See [below](#extract-examples) for examples.
+
+#### <a name="extract-examples"/>Examples
 
 ```erlang
 User = jsn:new([{'user.id', <<"123">>},
@@ -270,6 +306,52 @@ User2 = jsn:new([{'user.id', <<"456">>},
 %     {<<"activated">>,true},
 %     {<<"name">>,
 %      [{<<"first">>,<<"Jane">>},{<<"last">>,<<"Doe">>}]}]}]]
+
+% select the first name from the users:
+jsn:select({value, <<"user.name.first">>}, [User, User2]).
+% [<<"Jane">>,<<"Eve">>]
+
+% select the user id and whole object from the users:
+jsn:select([{value, [<<"user">>, <<"id">>]}, identity], [User, User2]).
+% [[<<"123">>,
+%   [{<<"user">>,
+%     [{<<"id">>,<<"123">>},
+%      {<<"activated">>,true},
+%      {<<"name">>,
+%       [{<<"first">>,<<"Jane">>},{<<"last">>,<<"Doe">>}]}]}]],
+%  [<<"456">>,
+%   [{<<"user">>,
+%     [{<<"id">>,<<"456">>},
+%      {<<"name">>,
+%       [{<<"first">>,<<"Eve">>},
+%        {<<"middle">>,<<"L.">>},
+%        {<<"last">>,<<"Doer">>}]}]}]]]
+
+% select the user id and first name from the users whose last name is <<"Doe">>:
+jsn:select([{value, [<<"user">>, <<"id">>]},
+            {value, [<<"user">>, <<"name">>, <<"first">>]}],
+           {<<"user.name.last">>, <<"Doe">>},
+           [User, User2]).
+% [[<<"123">>,<<"Jane">>]]
+
+% select the user id from the users whose middle name is missing:
+jsn:select({value, [<<"user">>, <<"id">>]},
+           {<<"user.name.middle">>, fun(undefined) -> true; (_) -> false end},
+           [User, User2]).
+% [<<"123">>]
+
+% select the user id from the users whose whose first name is < 4 characters
+% and whose last name is > 3 characters
+ConditionFun = fun(Object) ->
+                   [First, Last] = jsn:get_list([<<"user.name.first">>,
+                                                 <<"user.name.last">>],
+                                                Object),
+                   (byte_size(First) < 4) andalso (byte_size(Last) > 3)
+                end.
+jsn:select({value, [<<"user">>, <<"id">>]},
+           [ConditionFun],
+           [User, User2]).
+% [<<"456">>]
 ```
 
 ### `set/3` and `set_list/2` - Add to and update existing objects
@@ -280,7 +362,7 @@ User2 = jsn:new([{'user.id', <<"456">>},
   the `set/3` function to the each Path and Value using the given object, and
   return the result.
 
-Examples:
+#### Examples
 
 ```erlang
 User = jsn:new([{'user.id', <<"123">>},
@@ -325,7 +407,7 @@ jsn:set_list([{'user.activated', false},
   Value or list of Values, check each path Value/Values, and if equal, remove the
   matching Path, Value pair from the object, and return the result.
 
-Examples:
+#### Examples
 
 ```erlang
 Company = jsn:new([{'company.name', <<"Foobar, Inc.">>},
@@ -403,7 +485,7 @@ jsn:delete_if_equal('company.location', SecretLocations, Company).
   apply the fun to the value at path and modify the given object. Return the
   new object.
 
-Examples:
+#### Examples
 
 ```erlang
 Source = jsn:new([{'key1', <<"value1">>},
@@ -459,7 +541,7 @@ the many Erlang JSON libraries available:
   * `soft`  - missing paths are ignored. Only values that exist are checked for
     equality.
 
-Examples:
+#### Examples
 
 ```erlang
 Object1 = jsn:new([{<<"path1">>, <<"thing1">>},
@@ -503,7 +585,7 @@ jsn:equal([<<"path1">>, <<"path3">>], Object1, [Object1, Object2], soft).
   eep18, or struct format), returning `true` if all values, key-value pairs,
   and array members in the first input are present in the second input.
 
-Examples:
+#### Examples
 
 ```erlang
 Object1 = jsn:new([{<<"path1">>, <<"thing1">>},
