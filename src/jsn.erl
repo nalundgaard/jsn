@@ -466,6 +466,10 @@ equal(Paths, OriginalObject, OtherObjectOrObjects) ->
 %% if mode is soft, a mismatch is allowed if the value is missing from any of
 %% the new objects
 %%------------------------------------------------------------------------------
+?IF_MAPS(
+equal(Paths, OriginalObject, OtherObject, Mode) when is_map(OtherObject) ->
+    object_equal(Paths, OriginalObject, OtherObject, Mode);
+)
 equal(Paths, OriginalObject, [], Mode) ->
     object_equal(Paths, OriginalObject, [], Mode);
 equal(Paths, OriginalObject, [{K,_}|_] = P, Mode) when K =/= struct ->
