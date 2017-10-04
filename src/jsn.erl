@@ -1,7 +1,7 @@
 %%------------------------------------------------------------------------------
 %% jsn - Functions for interacting with decoded JSON objects 
 %%
-%% @author Nicholas Lundgaard <nlundgaard@alertlogic.com>
+%% @author Nicholas Lundgaard <nalundgaard@gmail.com>
 %%------------------------------------------------------------------------------
 -module(jsn).
 
@@ -31,12 +31,6 @@
 %% object format conversion
 -export([as_proplist/1, from_proplist/1, from_proplist/2]).
 
-%% DEPRECATED: JSON encode/decode
--export([encode/1, decode/1, decode/2]).
-%% DEPRECATED: sort functions
--export([sort/1, sort_keys/1]).
--export([sort_equal/2]).
-
 -ifdef(TEST).
 -compile([export_all]).
 -endif.
@@ -55,7 +49,7 @@
 %% constants
 %%==============================================================================
 
--define(DEFAULT_FORMAT, proplist).
+-define(DEFAULT_FORMAT, map).
 
 %% guard for matching a JSON string, boolean, number, null
 -define(IS_SIMPLE_JSON_TERM(X), 
@@ -384,50 +378,6 @@ path_elements(tuple, [Index | Rest], Acc) when Index =:= first; Index =:= last -
 path_elements(Type, Path, Acc) ->
     erlang:error(badarg, [Type, Path, Acc]).
 
-
-%%==============================================================================
-%% sort API
-%%==============================================================================
-
-
--spec sort(json_no_map_term()) -> json_no_map_term().
-%%------------------------------------------------------------------------------
-%% @doc given a json term, recursively sort the keys and arrays in the object,
-%% if they are present; note that this will sort arrays in the object, not just
-%% the keys.
-%%
-%% @deprecated This function is imcompatible with map objects; avoid using it.
-%%------------------------------------------------------------------------------
-sort(L) when is_list(L) ->
-    lists:sort([sort(V) || V <- L]);
-sort({K, V}) ->
-    {K, sort(V)}; %% Handles mochijson {'struct', V} object format as well.
-sort({V}) ->
-    {sort(V)};
-sort(V) ->
-    V.
-
-
--spec sort_keys(json_no_map_term()) -> json_no_map_term().
-%%------------------------------------------------------------------------------
-%% @doc given a json term or json proplist term, recursively sort keys in 
-%% all objects at all levels.
-%%
-%% @deprecated This function is imcompatible with map objects; avoid using it.
-%%------------------------------------------------------------------------------
-
-sort_keys({struct, V}) ->
-    {struct, sort_keys(V)};
-sort_keys({V}) ->
-    {sort_keys(V)};
-sort_keys([{K, _V}|_] = P) when is_binary(K); is_atom(K), K =/= struct ->
-    lists:sort([{Key, sort_keys(Value)} || {Key, Value} <- P]);
-sort_keys(L) when is_list(L) ->
-    [sort_keys(V) || V <- L];
-sort_keys(V) when ?IS_SIMPLE_JSON_TERM(V) ->
-    V.
-
-
 %%==============================================================================
 %% comparison API
 %%==============================================================================
@@ -466,10 +416,6 @@ equal(Paths, OriginalObject, OtherObjectOrObjects) ->
 %% if mode is soft, a mismatch is allowed if the value is missing from any of
 %% the new objects
 %%------------------------------------------------------------------------------
-?IF_MAPS(
-equal(Paths, OriginalObject, OtherObject, Mode) when is_map(OtherObject) ->
-    object_equal(Paths, OriginalObject, OtherObject, Mode);
-)
 equal(Paths, OriginalObject, [], Mode) ->
     object_equal(Paths, OriginalObject, [], Mode);
 equal(Paths, OriginalObject, [{K,_}|_] = P, Mode) when K =/= struct ->
@@ -477,6 +423,8 @@ equal(Paths, OriginalObject, [{K,_}|_] = P, Mode) when K =/= struct ->
 equal(Paths, OriginalObject, {_} = OtherObject, Mode) ->
     object_equal(Paths, OriginalObject, OtherObject, Mode);
 equal(Paths, OriginalObject, {struct, _} = OtherObject, Mode) ->
+    object_equal(Paths, OriginalObject, OtherObject, Mode);
+equal(Paths, OriginalObject, OtherObject, Mode) when is_map(OtherObject) ->
     object_equal(Paths, OriginalObject, OtherObject, Mode);
 equal(Paths, OriginalObject, OtherObjects, Mode) when is_list(OtherObjects) ->
     try
@@ -490,33 +438,15 @@ equal(Paths, OriginalObject, OtherObjects, Mode) when is_list(OtherObjects) ->
     end.
 
 
--spec sort_equal(json_no_map_term(), json_no_map_term()) -> boolean().
-%%------------------------------------------------------------------------------
-%% @doc given two json terms, return true if they are equal after sorting
-%% all contained lists (including, but not limited to, proplists).
-%% 
-%% unlike equal/3,4 this function can be used to check equality of large complex
-%% objects, but only when order of list items doesn't matter; note that this 
-%% only works if both terms are in the same format: e.g., if one is a proplist
-%% and the other is eep18, this will always return false.
-%%
-%% @deprecated This function is imcompatible with map objects; avoid using it.
-%%------------------------------------------------------------------------------
-sort_equal(A, B) ->
-    sort(A) =:= sort(B).
-
-
 -spec is_equal(json_term(), json_term()) -> boolean().
 %%------------------------------------------------------------------------------
 %% @doc given 2 json terms A and B in any format (eep18, struct, proplist, or
 %% map, if supported), return true if they are equivalent
 %%------------------------------------------------------------------------------
-?IF_MAPS(
 is_equal(A, B) when is_map(A) ->
     is_equal(maps:to_list(A), B);
 is_equal(A, B) when is_map(B) ->
     is_equal(A, maps:to_list(B));
-)
 is_equal({A}, B) when is_list(A) ->
     is_equal(A, B);
 is_equal({struct, A}, B) when is_list(A) ->
@@ -544,12 +474,10 @@ is_equal(_A, _B) ->
 %% CAUTION: this comparison treats json array comparisons as subset comparisons,
 %% not just object comparisons. so, `is_subset([1,1,1], [1,2])' is `true'
 %%------------------------------------------------------------------------------
-?IF_MAPS(
 is_subset(A, B) when is_map(A) ->
     is_subset(maps:to_list(A), B);
 is_subset(A, B) when is_map(B) ->
     is_subset(A, maps:to_list(B));
-)
 is_subset({A}, B) when is_list(A) ->
     is_subset(A, B);
 is_subset({struct, A}, B) when is_list(A) ->
@@ -569,71 +497,20 @@ is_subset(A, A) when ?IS_SIMPLE_JSON_TERM(A) ->
 is_subset(_A, _B) ->
     false.
 
-
-%%==============================================================================
-%% JSON encode/decode
-%%==============================================================================
-
-
--spec encode(json_term()) -> Json :: binary().
-%%------------------------------------------------------------------------------
-%% @doc encode a json_term into a JSON binary string
-%% @deprecated Please use jiffy, jsone, or jsx instead.
-%%------------------------------------------------------------------------------
-encode(Object) ->
-    try jsonx:encode(Object) of
-        Json when is_binary(Json) -> Json;
-        Error -> throw({error, Error})
-    catch
-        _:Reason3 ->  throw({error, Reason3})
-    end.
-
-
--spec decode(Json :: iolist()) -> json_term().
-%%------------------------------------------------------------------------------
-%% @doc decode a JSON string into a json_term
-%% @deprecated Please use jiffy, jsone, or jsx instead.
-%%------------------------------------------------------------------------------
-decode(Json) ->
-    decode(Json, []).
-
-
--spec decode(Json :: iolist(), jsn_options()) -> json_term().
-%%------------------------------------------------------------------------------
-%% @doc decode a JSON string into a jsn object using the given options
-%% @deprecated Please use jiffy, jsone, or jsx instead.
-%%------------------------------------------------------------------------------
-decode(Json, Options) when is_list(Json) ->
-    decode(list_to_binary(Json), Options);
-decode(Json, Options) when is_binary(Json) ->
-    try jsonx:decode(Json, [{format, get_format(Options)}]) of
-        {error, Reason, Location} -> throw({error, {Reason, Location}});
-        {error, Reason2}          -> throw({error, Reason2});
-        Object -> Object
-    catch
-        _:Reason3 ->  throw({error, Reason3})
-    end;
-decode(Json, _Options) ->
-    throw({error, {invalid_input, Json}}).
-
-
 %%==============================================================================
 %% conversion API
 %%==============================================================================
-
 
 -spec as_proplist(json_term()) -> json_term().
 %%------------------------------------------------------------------------------
 %% @doc convert a jsn object (or list of them) into a proplist
 %%------------------------------------------------------------------------------
-?IF_MAPS(
 as_proplist(M) when is_map(M) ->
     maps:fold(fun(Key, Value, Acc) ->
                   [{to_binary(Key), as_proplist(Value)} | Acc]
               end,
               [],
               M);
-)
 as_proplist({struct, List}) when is_list(List) ->
     as_proplist(List);
 as_proplist({List}) when is_list(List) ->
@@ -665,13 +542,13 @@ from_proplist(Object) ->
 %%------------------------------------------------------------------------------
 from_proplist([{_,_}|_] = P0, Options) ->
     case get_format(Options) of
-        ?IF_MAPS(map ->
+        map ->
             lists:foldl(fun({K,V}, Acc) ->
                             Acc#{to_binary(K) => from_proplist(V, Options)}
                         end,
                         ?EMPTY_MAP,
                         P0) 
-            ;)
+            ;
         OtherFormat ->
             P = [{to_binary(Key), from_proplist(Value, Options)} || {Key, Value} <- P0],
             case OtherFormat of
@@ -683,7 +560,6 @@ from_proplist([{_,_}|_] = P0, Options) ->
 from_proplist(List, Options) when is_list(List) ->
     [from_proplist(Value, Options) || Value <- List];
 from_proplist(X, _Options) -> X.
-
 
 %%==============================================================================
 %% internal functions
@@ -736,11 +612,11 @@ apply_selection(Selection, Element) ->
 %%------------------------------------------------------------------------------
 get_format(Options) ->
     case lists:keyfind(format, 1, Options) of
-        ?IF_MAPS({_, map} -> map;)
-        {_, proplist}     -> proplist;
-        {_, eep18}        -> eep18;
-        {_, struct}       -> struct;
-        false             -> ?DEFAULT_FORMAT;
+        {_, map}      -> map;
+        {_, proplist} -> proplist;
+        {_, eep18}    -> eep18;
+        {_, struct}   -> struct;
+        false         -> ?DEFAULT_FORMAT;
         _ ->
             erlang:error(badarg, [Options])
     end.
@@ -752,10 +628,10 @@ get_format(Options) ->
 %%------------------------------------------------------------------------------
 empty_object(Options) ->
     case get_format(Options) of
-        ?IF_MAPS(map -> ?EMPTY_MAP;)
+        map      -> ?EMPTY_MAP;
         proplist -> ?EMPTY_PROPLIST;
-        eep18 -> ?EMPTY_EEP18;
-        struct -> ?EMPTY_STRUCT
+        eep18    -> ?EMPTY_EEP18;
+        struct   -> ?EMPTY_STRUCT
     end.
 
 
@@ -768,10 +644,8 @@ empty_object(Options) ->
 %% value, upsate the object at the location defined by the path to the given
 %% to be value, and return the updated object
 %%------------------------------------------------------------------------------
-?IF_MAPS(
 keys_set(Keys, Object, Value) when is_map(Object) ->
     keys_set(Keys, Object, Value, empty_object([{format, map}]));
-)
 keys_set(Keys, {P} = Object, Value) when is_list(P) ->
     keys_set(Keys, Object, Value, empty_object([{format, eep18}]));
 keys_set(Keys, {struct, P} = Object, Value) when is_list(P) ->
@@ -797,7 +671,7 @@ keys_set(Keys, {struct, P}, Value, Empty) when is_list(P) ->
 keys_set(Keys, {P}, Value, Empty) when is_list(P) ->
     {keys_set(Keys, P, Value, Empty)};
 keys_set([Key | Rest], Object, Value, Empty)
-  when is_binary(Key), (is_list(Object) ?IF_MAPS(orelse is_map(Object))) ->
+  when is_binary(Key), (is_list(Object) orelse is_map(Object)) ->
     case key_get(Key, Object, jsn__undefined) of
         E when E =:= jsn__undefined; E =:= Empty ->
             key_set(Key, Object, keys_set(Rest, Empty, Value, Empty)); 
@@ -818,12 +692,10 @@ keys_set([Index | Rest], A, Value, Empty) when is_integer(Index);
 %% object at the key; if the value is a deletion, remove the key, value pair, 
 %% if it exists
 %%------------------------------------------------------------------------------
-?IF_MAPS(
 key_set(Key, M, jsn__delete) when is_binary(Key) andalso is_map(M) ->
     maps:remove(Key, maps:remove(safe_binary_to_atom(Key), M));
 key_set(Key, M, Value) when is_binary(Key) andalso is_map(M) -> 
     maps:put(Key, Value, M);
-)
 key_set(Key, [], jsn__delete) when is_binary(Key) -> 
     [];
 key_set(Key, [{_,_}|_] = P, jsn__delete) when is_binary(Key) -> 
@@ -899,7 +771,6 @@ key_get(Key, Object) ->
 %% or return undefined; this is function does not support nested keys (i.e., 
 %% paths), only single, flat keys
 %%------------------------------------------------------------------------------
-?IF_MAPS(
 key_get(Key, M, Default) when is_map(M) ->
     case maps:find(Key, M) of
         error ->
@@ -909,7 +780,6 @@ key_get(Key, M, Default) when is_map(M) ->
             end;
         {ok, Value} -> Value
     end;
-)
 key_get(Key, {P}, Default) when is_list(P) ->
     key_get(Key, P, Default);
 key_get(Key, {struct, P}, Default) when is_list(P) ->
