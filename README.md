@@ -7,11 +7,11 @@ JSON objects in particular.
 
 In the spirit of [ej][ej], it supports the common formats output by JSON
 decoders such as [jsone][jsone], [jiffy][jiffy], and [mochijson2][mochijson2].
-Unlike [ej][ej], however, it supports _all three_ common JSON representations
+Unlike [ej][ej], however, it supports _all four_ common JSON representations
 in Erlang:
 
-* `proplist` (**default**)(used by [jsonx][jsonx])
-* `map` (common to [jsone][jsone], [jiffy][jiffy], and [jsx][jsx])
+* `map` (**default**)(common to [jsone][jsone], [jiffy][jiffy], and [jsx][jsx])
+* `proplist` (used by [jsonx][jsonx])
 * `eep18` (common to [jiffy][jiffy], [jsone][jsone], and [jsonx][jsonx])
 * `struct` (common to [mochijson2][mochijson2])
 
@@ -27,27 +27,6 @@ need arose for the library to be proplist-compatible, then map-compatible, so
 it has been refactored to be a nearly standalone library.
 
 ## Caveats & known issues
-
-### Deprecated: Erlang 17 or lower
-
-jsn will no longer support Erlang 17 or previous Erlang releases. Allowing the
-`map` format to work without breaking Erlang versions that do not support maps
-(or have an incomplete implementation of maps, i.e., Erlang 17) requires
-inelegant conditional macros throughout the code and test. This support will
-be removed in the next major version of jsn.
-
-### Deprecated: encoding and decoding
-
-jsn will no longer support encoding and decoding. It will be removed in the next
-major version of jsn. See [below](#encode-decode) for more information.
-
-### Deprecated: key sorting functions
-
-jsn will no longer support the `jsn:sort/1`, `jsn:sort_keys/1`, and
-`jsn:sort_equal/2` functions. These functions are incompatible with the `map`
-format; the ambiguity of library functions which are only partially compatible
-with the supported formats is confusing for clients. For this reason, the
-functions will be removed in the next major version of jsn.
 
 ### Proplist format concerns
 
@@ -69,25 +48,9 @@ jsn does not plan to support a [jsx][jsx] and [jsone][jsone] compatible
 format instead. It a vastly more performant data structure that maps naturally
 to JSON objects without ambiguity.
 
-### Edoc generation broken by map support
-
-the `edoc` make target (and using `rebar3 edoc`) are currently broken due to a
-parser problem triggered by the `IF_MAPS(...)` macro used to implement the
-`map` format in a backwards-compatible fashion. Edoc support will be restored
-when this problem is addressed in Erlang or the `map` backwards-compatibility
-constructions are removed from jsn in a future version.
-
 ## Roadmap
 
-### 2.0.0
-
-* **Remove deprecated functions `jsn:sort/1`, `jsn:sort_keys/1`, and `jsn:sort_equal/2`**.
-* **Remove deprecated support for Erlang 17 and lower**. Full `map` support will be
-  assumed by the code, and these older versions will no longer be able to
-  compile jsn.
-* **Make `map` the default object format**. Maps are superior to proplists for
-  JSON object representation in Erlang, and will be favored primarily by the
-  library.
+Future improvements to this library are TBD at this time.
 
 ## Running 
 
@@ -160,8 +123,8 @@ There are 3 different supported path styles, each with different tradeoffs:
 ## Library functions
 
 jsn provides functions to create, append, delete, and transform objects in all
-supported formats (`proplist`, `eep18`, and `struct`). This section contains a
-reference for the primary library functions available.
+supported formats (`map`, `proplist`, `eep18`, and `struct`). This section
+contains a reference for the primary library functions available.
 
 ### `new/0,1,2` - Create a new object
 
@@ -513,18 +476,6 @@ jsn:transform([{key1, T1},{key2, T1},{key4, T1}], NewDestination).
 %  {<<"key1">>,<<"1">>},
 %  {<<"key2">>,<<"2">>}]
 ```
-
-### <a name="encode-decode"></a>`encode/1` and `decode/1,2` - Encoding/decoding JSON for interaction with jsn
-
-**NOTE**: encoding and decoding are **deprecated**, and will be removed in a
-future version of jsn (`2.x.x`). the [jsonx][jsonx] library that jsn uses for
-this functionality is abandoned, and users are strongly advised to use any of
-the many Erlang JSON libraries available:
-
-* [jiffy][jiffy] (`eep18` and `map` formats)
-* [jsone][jsone] (`eep18`, `proplist`, and `map` formats)
-* [jsx][jsx] (`proplist` and `map` formats)
-* [mochijson2][mochijson2] (`struct` format)
 
 ### `equal/3,4` - Path-wise object comparison
 

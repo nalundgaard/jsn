@@ -1,4 +1,1 @@
-[{<<"jsonx">>,
-  {git,"https://github.com/alertlogic/jsonx.git",
-       {ref,"02ddffb5da9c6d1664bda89b459480b69ebff258"}},
-  0}].
+[].

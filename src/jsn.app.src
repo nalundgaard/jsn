@@ -1,9 +1,9 @@
 {application, jsn, [
     {description, "Utilities for interacting with decoded JSON in erlang"},
-    {vsn, "1.2.1"}, %% <- need to set this appropriately when publishing to hex.pm
+    {vsn, "2.0.0"},
     {applications, [kernel,
-                    stdlib,
-                    jsonx]},
+                    stdlib
+                   ]},
     {maintainers, ["Nicholas Lundgaard", "Mark Allen"]},
     {licenses, ["Apache 2"]},
     {links, [{"Github", "https://github.com/nalundgaard/jsn"}]}
