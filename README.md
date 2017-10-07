@@ -70,14 +70,14 @@ jsn is an OTP library, and does not really need to be started as such.
 
 ## Application integration
 
-
-To add `jsn` to your Erlang OTP application, simply add it to your
+`jsn` has been published to [hex.pm](https://hex.pm/packages/jsn); to
+add `jsn` to your Erlang OTP application, simply add it to your
 `rebar.config`:
 
 ```erlang
 {deps, [
     %% ... your deps ...
-    {jsn, {git, "https://github.com/nalundgaard/jsn.git", {branch, master}}}
+    jsn
 ]}.
 ```
 
