@@ -140,34 +140,34 @@ contains a reference for the primary library functions available.
 ```erlang
 % create an empty object
 jsn:new().
-% []
+% #{}
 
 % create an object using a single path, value pair.
 jsn:new({'user.id', <<"123">>}).
-% [{<<"user">>,[{<<"id">>,<<"123">>}]}]
+% #{<<"user">> => #{<<"id">> => <<"123">>}}
 
 % create an object using a list of path, value pairs.
 jsn:new([{'user.id', <<"123">>}, {<<"user.name">>, <<"John">>}]).
-% [{<<"user">>,
-%   [{<<"id">>,<<"123">>},{<<"name">>,<<"John">>}]}]
+% #{<<"user">> => #{<<"id">> => <<"123">>,
+%                   <<"name">> => <<"John">>}}
+
+% create a jsn object in proplist format
+jsn:new([{'user.id', <<"123">>},
+         {<<"user.name">>, <<"John">>}], [{format, proplist}]).
+% [{<<"user">>, [{<<"id">>,<<"123">>},
+%                {<<"name">>,<<"John">>}]}]
 
 % create a jsn object in eep18 format
 jsn:new([{'user.id', <<"123">>},
          {<<"user.name">>, <<"John">>}], [{format, eep18}]).
-% {[{<<"user">>,
-%    {[{<<"id">>,<<"123">>},{<<"name">>,<<"John">>}]}}]}
+% {[{<<"user">>, {[{<<"id">>,<<"123">>},
+%                  {<<"name">>,<<"John">>}]}}]}
 
 % create a jsn object in struct (mochijson2) format
 jsn:new([{'user.id', <<"123">>},
          {<<"user.name">>, <<"John">>}], [{format, struct}]).
-% {struct,[{<<"user">>,
-%           {struct,[{<<"id">>,<<"123">>},{<<"name">>,<<"John">>}]}}]}
-
-% create a jsn object in map format
-jsn:new([{'user.id', <<"123">>},
-         {<<"user.name">>, <<"John">>}], [{format, map}]).
-% #{<<"user">> =>
-%       #{<<"id">> => <<"123">>,<<"name">> => <<"John">>}}
+% {struct, [{<<"user">>, {struct, [{<<"id">>,<<"123">>},
+%                                  {<<"name">>,<<"John">>}]}}]}
 ```
 
 ### `get/2,3`, `get_list/2,3`, `find/3,4`, and `select/2,3` - Extract data from objects
@@ -229,11 +229,10 @@ User = jsn:new([{'user.id', <<"123">>},
                 {'user.activated', true},
                 {'user.name.first', <<"Jane">>},
                 {'user.name.last', <<"Doe">>}]).
-% [{<<"user">>,
-%   [{<<"id">>,<<"123">>},
-%    {<<"activated">>,true},
-%    {<<"name">>,
-%     [{<<"first">>,<<"Jane">>},{<<"last">>,<<"Doe">>}]}]}]
+% #{<<"user">> => #{<<"activated">> => true,
+%                   <<"id">> => <<"123">>,
+%                   <<"name">> => #{<<"first">> => <<"Jane">>,
+%                                   <<"last">> => <<"Doe">>}}}
 
 % get the user id
 UserId = jsn:get('user.id', User).
@@ -242,7 +241,7 @@ UserId = jsn:get('user.id', User).
 % get a non-existant field, with and without a custom default
 jsn:get(<<"user.deleted">>, User).
 % undefined
-jsn:get([<<"user">>, <<"deleted">>, User, false).
+jsn:get([<<"user">>, <<"deleted">>], User, false).
 % false
 
 % get several fields in a single call:
@@ -255,20 +254,17 @@ User2 = jsn:new([{'user.id', <<"456">>},
                  {'user.name.first', <<"Eve">>},
                  {'user.name.middle', <<"L.">>},
                  {'user.name.last', <<"Doer">>}]).
-% [{<<"user">>,
-%   [{<<"id">>,<<"456">>},
-%    {<<"name">>,
-%     [{<<"first">>,<<"Eve">>},
-%      {<<"middle">>,<<"L.">>},
-%      {<<"last">>,<<"Doer">>}]}]}]
+% #{<<"user">> => #{<<"id">> => <<"456">>,
+%                   <<"name">> => #{<<"first">> => <<"Eve">>,
+%                                    <<"last">> => <<"Doer">>,
+%                                    <<"middle">> => <<"L.">>}}}
 
 % find the first user by id:
 [User] = jsn:find({<<"user">>, <<"id">>}, <<"123">>, [User, User2]).
-% [[{<<"user">>,
-%    [{<<"id">>,<<"123">>},
-%     {<<"activated">>,true},
-%     {<<"name">>,
-%      [{<<"first">>,<<"Jane">>},{<<"last">>,<<"Doe">>}]}]}]]
+% [#{<<"user">> => #{<<"activated">> => true,
+%                    <<"id">> => <<"123">>,
+%                    <<"name">> => #{<<"first">> => <<"Jane">>,
+%                                    <<"last">> => <<"Doe">>}}}]
 
 % select the first name from the users:
 jsn:select({value, <<"user.name.first">>}, [User, User2]).
@@ -276,19 +272,16 @@ jsn:select({value, <<"user.name.first">>}, [User, User2]).
 
 % select the user id and whole object from the users:
 jsn:select([{value, [<<"user">>, <<"id">>]}, identity], [User, User2]).
-% [[<<"123">>,
-%   [{<<"user">>,
-%     [{<<"id">>,<<"123">>},
-%      {<<"activated">>,true},
-%      {<<"name">>,
-%       [{<<"first">>,<<"Jane">>},{<<"last">>,<<"Doe">>}]}]}]],
-%  [<<"456">>,
-%   [{<<"user">>,
-%     [{<<"id">>,<<"456">>},
-%      {<<"name">>,
-%       [{<<"first">>,<<"Eve">>},
-%        {<<"middle">>,<<"L.">>},
-%        {<<"last">>,<<"Doer">>}]}]}]]]
+% [[<<"123">>, #{<<"user">> =>
+%                    #{<<"activated">> => true,
+%                      <<"id">> => <<"123">>,
+%                      <<"name">> => #{<<"first">> => <<"Jane">>,
+%                                      <<"last">> => <<"Doe">>}}}],
+%  [<<"456">>, #{<<"user">> =>
+%                    #{<<"id">> => <<"456">>,
+%                      <<"name">> => #{<<"first">> => <<"Eve">>,
+%                                      <<"last">> => <<"Doer">>,
+%                                      <<"middle">> => <<"L.">>}}}]]
 
 % select the user id and first name from the users whose last name is <<"Doe">>:
 jsn:select([{value, [<<"user">>, <<"id">>]},
@@ -332,32 +325,27 @@ User = jsn:new([{'user.id', <<"123">>},
                 {'user.activated', true},
                 {'user.name.first', <<"Jane">>},
                 {'user.name.last', <<"Doe">>}]).
-% [{<<"user">>,
-%   [{<<"id">>,<<"123">>},
-%    {<<"activated">>,true},
-%    {<<"name">>,
-%     [{<<"first">>,<<"Jane">>},{<<"last">>,<<"Doe">>}]}]}]
+% #{<<"user">> => #{<<"activated">> => true,
+%                   <<"id">> => <<"123">>,
+%                   <<"name">> => #{<<"first">> => <<"Jane">>,
+%                                   <<"last">> => <<"Doe">>}}}
 
 % Set Jane's middle name
 jsn:set([<<"user">>, <<"name">>, <<"middle">>], User, <<"Jacqueline">>).
-% [{<<"user">>,
-%   [{<<"id">>,<<"123">>},
-%    {<<"activated">>,true},
-%    {<<"name">>,
-%     [{<<"first">>,<<"Jane">>},
-%      {<<"last">>,<<"Doe">>},
-%      {<<"middle">>,<<"Jacqueline">>}]}]}]
+% #{<<"user">> => #{<<"activated">> => true,
+%                   <<"id">> => <<"123">>,
+%                   <<"name">> => #{<<"first">> => <<"Jane">>,
+%                                   <<"last">> => <<"Doe">>,
+%                                   <<"middle">> => <<"Jacqueline">>}}}
 
 % Deactivate Jane's User, and change her middle name
 jsn:set_list([{'user.activated', false},
               {'user.name.middle', <<"Jay">>}], User).
-% [{<<"user">>,
-%   [{<<"id">>,<<"123">>},
-%    {<<"activated">>,false},
-%    {<<"name">>,
-%     [{<<"first">>,<<"Jane">>},
-%      {<<"last">>,<<"Doe">>},
-%      {<<"middle">>,<<"Jay">>}]}]}]
+% #{<<"user">> => #{<<"activated">> => false,
+%                   <<"id">> => <<"123">>,
+%                   <<"name">> => #{<<"first">> => <<"Jane">>,
+%                                   <<"last">> => <<"Doe">>,
+%                                   <<"middle">> => <<"Jay">>}}}
 ```
 
 ### `delete/2`, `delete_list/2`, and `delete_if_equal/2` - Remove data from existing objects
@@ -377,64 +365,61 @@ Company = jsn:new([{'company.name', <<"Foobar, Inc.">>},
                    {'company.created.by', <<"00000000">>},
                    {'company.created.at', 469778436},
                    {'company.location', <<"U.S. Virgin Islands">>},
+                   {{<<"company">>, <<"employees">>}, []},
                    {{<<"company">>, <<"employees">>, 1, <<"id">>}, <<"00000000">>},
                    {{<<"company">>, <<"employees">>, 1, <<"name">>}, <<"Alice">>},
                    {{<<"company">>, <<"employees">>, 1, <<"position">>}, <<"CEO">>},
                    {{<<"company">>, <<"employees">>, 2, <<"id">>}, <<"00000001">>},
                    {{<<"company">>, <<"employees">>, 2, <<"name">>}, <<"Bob">>},
                    {{<<"company">>, <<"employees">>, 2, <<"position">>}, <<"CTO">>}]).
-% [{<<"company">>,
-%   [{<<"name">>,<<"Foobar, Inc.">>},
-%    {<<"created">>,
-%     [{<<"by">>,<<"00000000">>},{<<"at">>,469778436}]},
-%    {<<"location">>,<<"U.S. Virgin Islands">>},
-%    {<<"employees">>,
-%     [[{<<"id">>,<<"00000000">>},
-%       {<<"name">>,<<"Alice">>},
-%       {<<"position">>,<<"CEO">>}],
-%      [{<<"id">>,<<"00000001">>},
-%       {<<"name">>,<<"Bob">>},
-%       {<<"position">>,<<"CTO">>}]]}]}]
+% #{<<"company">> =>
+%       #{<<"created">> => #{<<"at">> => 469778436,
+%                            <<"by">> => <<"00000000">>},
+%         <<"employees">> => [#{<<"id">> => <<"00000000">>,
+%                               <<"name">> => <<"Alice">>,
+%                               <<"position">> => <<"CEO">>},
+%                             #{<<"id">> => <<"00000001">>,
+%                               <<"name">> => <<"Bob">>,
+%                               <<"position">> => <<"CTO">>}],
+%         <<"location">> => <<"U.S. Virgin Islands">>,
+%         <<"name">> => <<"Foobar, Inc.">>}}
 
 % remove the location from Company
 jsn:delete('company.location', Company).
-% [{<<"company">>,
-%   [{<<"name">>,<<"Foobar, Inc.">>},
-%    {<<"created">>,
-%     [{<<"by">>,<<"00000000">>},{<<"at">>,469778436}]},
-%    {<<"employees">>,
-%     [[{<<"id">>,<<"00000000">>},
-%       {<<"name">>,<<"Alice">>},
-%       {<<"position">>,<<"CEO">>}],
-%      [{<<"id">>,<<"00000001">>},
-%       {<<"name">>,<<"Bob">>},
-%       {<<"position">>,<<"CTO">>}]]}]}]
+% #{<<"company">> =>
+%       #{<<"created">> => #{<<"at">> => 469778436,
+%                            <<"by">> => <<"00000000">>},
+%         <<"employees">> => [#{<<"id">> => <<"00000000">>,
+%                               <<"name">> => <<"Alice">>,
+%                               <<"position">> => <<"CEO">>},
+%                             #{<<"id">> => <<"00000001">>,
+%                               <<"name">> => <<"Bob">>,
+%                               <<"position">> => <<"CTO">>}],
+%         <<"name">> => <<"Foobar, Inc.">>}}
 
 % delete Bob and the location in one call
 jsn:delete_list(['company.location', {<<"company">>, <<"employees">>, last}], Company).
-% [{<<"company">>,
-%   [{<<"name">>,<<"Foobar, Inc.">>},
-%    {<<"created">>,
-%     [{<<"by">>,<<"00000000">>},{<<"at">>,469778436}]},
-%    {<<"employees">>,
-%     [[{<<"id">>,<<"00000000">>},
-%       {<<"name">>,<<"Alice">>},
-%       {<<"position">>,<<"CEO">>}]]}]}]
+% #{<<"company">> =>
+%       #{<<"created">> => #{<<"at">> => 469778436,
+%                            <<"by">> => <<"00000000">>},
+%         <<"employees">> => [#{<<"id">> => <<"00000000">>,
+%                               <<"name">> => <<"Alice">>,
+%                               <<"position">> => <<"CEO">>}],
+%         <<"name">> => <<"Foobar, Inc.">>}}
 
 % conditionally delete the company Location
 SecretLocations = [<<"Nevada">>, <<"Luxembourg">>, <<"U.S. Virgin Islands">>].
 jsn:delete_if_equal('company.location', SecretLocations, Company).
-% [{<<"company">>,
-%   [{<<"name">>,<<"Foobar, Inc.">>},
-%    {<<"created">>,
-%     [{<<"by">>,<<"00000000">>},{<<"at">>,469778436}]},
-%    {<<"employees">>,
-%     [[{<<"id">>,<<"00000000">>},
-%       {<<"name">>,<<"Alice">>},
-%       {<<"position">>,<<"CEO">>}],
-%      [{<<"id">>,<<"00000001">>},
-%       {<<"name">>,<<"Bob">>},
-%       {<<"position">>,<<"CTO">>}]]}]}]
+% #{<<"company">> =>
+%       #{<<"created">> => #{<<"at">> => 469778436,
+%                            <<"by">> => <<"00000000">>},
+%         <<"employees">> => [#{<<"id">> => <<"00000000">>,
+%                               <<"name">> => <<"Alice">>,
+%                               <<"position">> => <<"CEO">>},
+%                             #{<<"id">> => <<"00000001">>,
+%                               <<"name">> => <<"Bob">>,
+%                               <<"position">> => <<"CTO">>}],
+%         <<"name">> => <<"Foobar, Inc.">>}}
 ```
 
 ### `copy/3,4` and `transform/2` - Re-shaping existing objects
@@ -455,26 +440,26 @@ Source = jsn:new([{'key1', <<"value1">>},
                   {'key2', <<"value2">>},
                   {'key3', <<"value3">>},
                   {'key3', <<"value3">>}]).
-% [{<<"key1">>,<<"value1">>},
-%  {<<"key2">>,<<"value2">>},
-%  {<<"key3">>,<<"value3">>}]
+% #{<<"key1">> => <<"value1">>,
+%   <<"key2">> => <<"value2">>,
+%   <<"key3">> => <<"value3">>}
 
 Destination = jsn:new({'key4', <<"value4">>}).
-% [{<<"key4">>,<<"value4">>}]
+% #{<<"key4">> => <<"value4">>}
 
 % copy some of the paths from source to destination
 [NewDestination] = jsn:copy(['key1', 'key2'], Source, Destination).
-% [[{<<"key4">>,<<"value4">>},
-%   {<<"key1">>,<<"value1">>},
-%   {<<"key2">>,<<"value2">>}]]
+% [#{<<"key1">> => <<"value1">>,
+%    <<"key2">> => <<"value2">>,
+%    <<"key4">> => <<"value4">>}]
 
 T1 = fun(<<"value", N/binary>>) -> N end.
 
 % transform all the keys of NewDestination
 jsn:transform([{key1, T1},{key2, T1},{key4, T1}], NewDestination).
-% [{<<"key4">>,<<"4">>},
-%  {<<"key1">>,<<"1">>},
-%  {<<"key2">>,<<"2">>}]
+% #{<<"key1">> => <<"1">>,
+%   <<"key2">> => <<"2">>,
+%   <<"key4">> => <<"4">>}
 ```
 
 ### `equal/3,4` - Path-wise object comparison
@@ -498,13 +483,13 @@ jsn:transform([{key1, T1},{key2, T1},{key4, T1}], NewDestination).
 Object1 = jsn:new([{<<"path1">>, <<"thing1">>},
                    {<<"path2">>, <<"thing2">>},
                    {<<"path3">>, <<"thing3">>}]).
-% {[{<<"path1">>,<<"thing1">>},
-%   {<<"path2">>,<<"thing2">>},
-%   {<<"path3">>,<<"thing3">>}]}
+% #{<<"path1">> => <<"thing1">>,
+%   <<"path2">> => <<"thing2">>,
+%   <<"path3">> => <<"thing3">>}
 
 Object2 = jsn:new([{<<"path1">>, <<"thing1">>},
                    {<<"path2">>, <<"notthing2">>}]).
-% {[{<<"path1">>,<<"thing1">>},{<<"path2">>,<<"notthing2">>}]}
+% #{<<"path1">> => <<"thing1">>, <<"path2">> => <<"notthing2">>}
 
 % by path1, these objects are equal
 jsn:equal([<<"path1">>], Object1, Object2).
@@ -541,7 +526,7 @@ jsn:equal([<<"path1">>, <<"path3">>], Object1, [Object1, Object2], soft).
 ```erlang
 Object1 = jsn:new([{<<"path1">>, <<"thing1">>},
                    {<<"path2">>, <<"thing2">>}]).
-% [{<<"path1">>,<<"thing1">>},{<<"path2">>,<<"thing2">>}]
+% #{<<"path1">> => <<"thing1">>,<<"path2">> => <<"thing2">>}
 
 Object2 = jsn:new([{<<"path1">>, <<"thing1">>},
                    {<<"path2">>, <<"thing2">>}], [{format, struct}]).
@@ -559,22 +544,22 @@ jsn:is_equal(Object1, Object3).
 % true
 
 Object4 = jsn:set(path1, Object1, 1).
-% {[{<<"path1">>,1},{<<"path2">>,<<"thing2">>}]}
+% #{<<"path1">> => 1,<<"path2">> => <<"thing2">>}
 
 jsn:is_equal(Object1, Object4).
 % false
 
 Object5 = jsn:set_list([{path3, <<"thing3">>}], Object1).
-% {[{<<"path3">>,<<"thing3">>},
-%   {<<"path1">>,<<"thing1">>},
-%   {<<"path2">>,<<"thing2">>}]}
+% #{<<"path1">> => <<"thing1">>,
+%   <<"path2">> => <<"thing2">>,
+%   <<"path3">> => <<"thing3">>}
 
 Object6 = jsn:set_list([{path3, <<"thing3">>}], Object2).
 % {struct,[{<<"path3">>,<<"thing3">>},
 %          {<<"path1">>,<<"thing1">>},
 %          {<<"path2">>,<<"thing2">>}]}
 
-jsn:is_subset(Object1, jsn:new(Object1)).
+jsn:is_subset(Object1, Object1).
 % true
 
 jsn:is_subset(Object1, Object2).
@@ -587,6 +572,44 @@ jsn:is_subset(Object3, Object1).
 % false
 ```
 
+### `as_map/1`, `from_map/1,2`, `as_proplist/1`, and `from_proplist/1,2` - Object format conversion
+
+* `as_map(Term)` - Convert any JSON objects in the input JSON term into map format.
+* `from_map(Term)` and `from_map(Term, Options)` - Convert a JSON term with map-format JSON
+  objects into an identical JSON term with all of the JSON objects converted into the default
+  format (or the one specified in Options, if given).
+* `as_proplist(Term)` - Convert any JSON objects in the input JSON term into proplist format.
+* `from_proplist(Term)` and `from_proplist(Term, Options)` - Convert a JSON term with
+  proplist-format JSON objects into an identical JSON term with all of the JSON objects converted
+  into the default object format (or the one specified in Options, if given).
+
+#### Examples
+
+```erlang
+Object1 = jsn:new([{<<"path1">>, <<"thing1">>},
+                   {<<"path2">>, <<"thing2">>}]).
+% #{<<"path1">> => <<"thing1">>,<<"path2">> => <<"thing2">>}
+
+Object2 = jsn:as_proplist(Object1).
+% [{<<"path2">>,<<"thing2">>},{<<"path1">>,<<"thing1">>}]
+
+Object3 = jsn:from_proplist(Object2, [{format, struct}]).
+% {struct,[{<<"path2">>,<<"thing2">>},
+%          {<<"path1">>,<<"thing1">>}]}
+
+Object1 = jsn:from_proplist(Object2).
+% #{<<"path1">> => <<"thing1">>,<<"path2">> => <<"thing2">>}
+
+Object1 = jsn:as_map(Object2).
+% #{<<"path1">> => <<"thing1">>,<<"path2">> => <<"thing2">>}
+
+Object2 = jsn:from_map(Object1, [{format, proplist}]).
+% [{<<"path2">>,<<"thing2">>},{<<"path1">>,<<"thing1">>}]
+
+Object3 = jsn:from_map(Object1, [{format, struct}]).
+% {struct,[{<<"path2">>,<<"thing2">>},
+%          {<<"path1">>,<<"thing1">>}]}
+```
 
 [ej]: https://github.com/seth/ej
 [kvc]: https://github.com/etrepum/kvc

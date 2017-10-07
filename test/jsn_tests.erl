@@ -359,7 +359,8 @@ transform_test_() ->
     T1 = [{<<"foo">>, F}],
     T2 = [{<<"foo">>, F}, {<<"mop">>, F}],
     [?_assertEqual(R1, jsn:transform(T1, Src)),
-     ?_assertEqual(R2, jsn:transform(T2, Src))].
+     ?_assertEqual(R2, jsn:transform(T2, Src)),
+     ?_assertError(badarg, jsn:transform(<<"not_a_transform">>, Src))].
 
 
 path_transform_test_() ->
@@ -372,7 +373,8 @@ path_transform_test_() ->
     T1 = [{<<"foo">>, <<"baz">>}],
     T2 = [{<<"foo">>, <<"baz">>}, {<<"map">>, <<"mop">>}], 
     [?_assertEqual(R1, jsn:path_transform(T1, Src)),
-     ?_assertEqual(R2, jsn:path_transform(T2, Src))].
+     ?_assertEqual(R2, jsn:path_transform(T2, Src)),
+     ?_assertError(badarg, jsn:path_transform(<<"not_a_transform">>, Src))].
 
 
 copy_mutate_test_() ->
@@ -442,7 +444,8 @@ select_test_() ->
      ?_assertError(badarg,
                    jsn:select(random_invalid_selection, [{<<"username">>, undefined}], Objects)),
      ?_assertError(badarg,
-                   jsn:select({value, <<"username">>, <<"No Name">>}, random_invalid_condition, Objects))].
+                   jsn:select({value, <<"username">>, <<"No Name">>}, random_invalid_condition, Objects)),
+     ?_assertError(badarg, jsn:select({value, <<"username">>}, not_a_list))].
 
 
 equal_test_() ->
@@ -658,7 +661,9 @@ from_as_proplist() ->
     ?assertEqual(Proplist, jsn:as_proplist(Map)),
     ?assertEqual(Proplist, jsn:as_proplist(Proplist)),
     ?assertEqual(Proplist, jsn:as_proplist(Eep18)),
-    ?assertEqual(Proplist, jsn:as_proplist(Struct)).
+    ?assertEqual(Proplist, jsn:as_proplist(Struct)),
+    ?assertEqual([Proplist, Proplist, Proplist, Proplist],
+                 jsn:as_proplist([Map, Proplist, Eep18, Struct])).
 
 
 %% run the above test several times
@@ -667,6 +672,70 @@ from_as_proplist_test_() ->
         fun() -> crypto:start() end,
         fun(_) -> crypto:stop() end,
         [fun from_as_proplist/0 || _ <- lists:seq(1, 5)]}.
+
+
+from_as_proplist_error_test_() ->
+    [?_assertError(badarg, jsn:as_proplist(not_json_term)),
+     ?_assertError(badarg, jsn:as_proplist([{<<"key">>, not_json_term}])),
+     ?_assertError(badarg, jsn:as_proplist([{{error, not_json_key}, <<"value">>}])),
+     ?_assertError(badarg, jsn:as_proplist([{<<"key">>, <<"value">>},
+                                            {key2, [{{error, not_json_key}, <<"value">>}]}])),
+     ?_assertError(badarg, jsn:as_proplist(#{{error, not_json_key} => <<"value">>})),
+     ?_assertError(badarg, jsn:as_proplist(#{<<"key">> => <<"value">>,
+                                             key2 => #{{error, not_json_key} => <<"value">>}})),
+     ?_assertError(badarg, jsn:from_proplist(not_json_term)),
+     ?_assertError(badarg, jsn:from_proplist([{<<"key">>, not_json_term}])),
+     ?_assertError(badarg, jsn:from_proplist([{{error, not_json_key}, <<"value">>}])),
+     ?_assertError(badarg, jsn:from_proplist([{<<"key">>, <<"value">>},
+                                              {key2, [{{error, not_json_key}, <<"value">>}]}])),
+     ?_assertError(badarg, jsn:from_proplist([{<<"key">>, <<"value">>},
+                                              {key2, [{{error, not_json_key}, <<"value">>}]}],
+                                             [{format, struct}]))].
+
+
+from_as_map() ->
+    Map = generate_json_object(7, [{format, map}]),
+    Proplist = jsn:as_proplist(Map),
+    Eep18 = jsn:from_proplist(Proplist, [{format, eep18}]),
+    Struct = jsn:from_proplist(Proplist, [{format, struct}]),
+    ?assertEqual(Map, jsn:from_map(Map)),
+    ?assertEqual(Map, jsn:from_map(Map, [{format, map}])),
+    ?assertEqual(Proplist, jsn:from_map(Map, [{format, proplist}])),
+    ?assertEqual(Eep18, jsn:from_map(Map, [{format, eep18}])),
+    ?assertEqual(Struct, jsn:from_map(Map, [{format, struct}])),
+    ?assertEqual(Map, jsn:as_map(Map)),
+    ?assertEqual(Map, jsn:as_map(Proplist)),
+    ?assertEqual(Map, jsn:as_map(Eep18)),
+    ?assertEqual(Map, jsn:as_map(Struct)),
+    ?assertEqual([Map, Map, Map, Map],
+                 jsn:as_map([Map, Proplist, Eep18, Struct])).
+
+
+%% run the above test several times
+from_as_map_test_() ->
+    {setup,
+        fun() -> crypto:start() end,
+        fun(_) -> crypto:stop() end,
+        [fun from_as_map/0 || _ <- lists:seq(1, 5)]}.
+
+
+from_as_map_error_test_() ->
+    [?_assertError(badarg, jsn:as_map(not_json_term)),
+     ?_assertError(badarg, jsn:as_map([{<<"key">>, not_json_term}])),
+     ?_assertError(badarg, jsn:as_map([{{error, not_json_key}, <<"value">>}])),
+     ?_assertError(badarg, jsn:as_map([{<<"key">>, <<"value">>},
+                                       {key2, [{{error, not_json_key}, <<"value">>}]}])),
+     ?_assertError(badarg, jsn:as_map(#{{error, not_json_key} => <<"value">>})),
+     ?_assertError(badarg, jsn:as_map(#{<<"key">> => <<"value">>,
+                                        key2 => #{{error, not_json_key} => <<"value">>}})),
+     ?_assertError(badarg, jsn:from_map(not_json_term)),
+     ?_assertError(badarg, jsn:from_map(#{<<"key">> => not_json_term})),
+     ?_assertError(badarg, jsn:from_map(#{{error, not_json_key} => <<"value">>})),
+     ?_assertError(badarg, jsn:from_map(#{<<"key">> => <<"value">>,
+                                          key2 => #{{error, not_json_key} => <<"value">>}})),
+     ?_assertError(badarg, jsn:from_map(#{<<"key">> => <<"value">>,
+                                          key2 => #{{error, not_json_key} => <<"value">>}},
+                                        [{format, proplist}]))].
 
 
 set_nth_test_() ->

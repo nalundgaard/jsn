@@ -29,7 +29,8 @@
 -export([is_equal/2]).
 -export([is_subset/2]).
 %% object format conversion
--export([as_proplist/1, from_proplist/1, from_proplist/2]).
+-export([as_map/1, from_map/1, from_map/2,
+         as_proplist/1, from_proplist/1, from_proplist/2]).
 
 -ifdef(TEST).
 -compile([export_all]).
@@ -53,10 +54,15 @@
 
 %% guard for matching a JSON string, boolean, number, null
 -define(IS_SIMPLE_JSON_TERM(X), 
-    is_binary(X);
-    is_boolean(X);
-    is_number(X); 
-    X =:= null ).
+        is_binary(X);
+        is_boolean(X);
+        is_number(X);
+        X =:= null ).
+
+%% guard for JSON key
+-define(IS_JSON_KEY(K),
+        is_binary(K);
+        is_atom(K)).
 
 %%==============================================================================
 %% lookup/storage API
@@ -324,8 +330,9 @@ transform(Transforms, Object) when is_list(Transforms) ->
             set(Path, Acc, Transform(get(Path, Object)))
         end,
         Object,
-        Transforms
-    ).
+        Transforms);
+transform(Transforms, Object) ->
+    erlang:error(badarg, [Transforms, Object]).
 
 
 -spec path_transform(Transforms :: [ {path(), path()} ],
@@ -348,7 +355,9 @@ path_transform(Transforms, Object) when is_list(Transforms) ->
                     end
                 end,
                 Object,
-                Transforms).
+                Transforms);
+path_transform(Transforms, Object) ->
+    erlang:error(badarg, [Transforms, Object]).
 
 
 -spec path_elements(path()) -> path_elements().
@@ -356,8 +365,10 @@ path_transform(Transforms, Object) when is_list(Transforms) ->
 %% @doc given a path, parse it into an ordered list of json keys (binary) and/or 
 %% array indexes
 %%------------------------------------------------------------------------------
-path_elements(Path) when is_binary(Path); is_atom(Path)  ->
-    binary:split(to_binary(Path), <<".">>, [global]);
+path_elements(Path) when is_binary(Path) ->
+    binary:split(Path, <<".">>, [global]);
+path_elements(Path) when is_atom(Path) ->
+    path_elements(atom_to_binary(Path, utf8));
 path_elements(Path) when is_list(Path) ->
     path_elements(list, lists:reverse(Path), []);
 path_elements(Path) when is_tuple(Path) ->
@@ -370,7 +381,7 @@ path_elements(_Type, [], Acc) ->
 path_elements(Type, [Key | Rest], Acc) when is_binary(Key) ->
     path_elements(Type, Rest, [Key | Acc]);
 path_elements(list, [Key | Rest], Acc) when is_atom(Key)  ->
-    path_elements(list, Rest, [to_binary(Key) | Acc]);
+    path_elements(list, Rest, [atom_to_binary(Key, utf8) | Acc]);
 path_elements(tuple, [Index | Rest], Acc) when is_integer(Index), Index > 0 ->
     path_elements(tuple, Rest, [Index | Acc]);
 path_elements(tuple, [Index | Rest], Acc) when Index =:= first; Index =:= last ->
@@ -501,13 +512,65 @@ is_subset(_A, _B) ->
 %% conversion API
 %%==============================================================================
 
+-spec as_map(json_term()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @doc convert any JSON objects in the input JSON term into map format
+%%------------------------------------------------------------------------------
+as_map(M) when is_map(M) ->
+    maps:map(fun(Key, Value) when ?IS_JSON_KEY(Key) ->
+                 as_map(Value);
+                (Key, Value) -> erlang:error(badarg, [Key, Value]) 
+             end,
+             M);
+as_map({struct, P}) when is_list(P) ->
+    as_map(P);
+as_map({P}) when is_list(P) ->
+    as_map(P);
+as_map([{struct, H}|T]) when is_list(H) ->
+    [as_map(H) | as_map(T)];
+as_map([{H}|T]) when is_list(H) ->
+    [as_map(H) | as_map(T)];
+as_map([{_K, _V}|_T] = P) ->
+    M = maps:from_list(P),
+    maps:map(fun(Key, Value) when ?IS_JSON_KEY(Key) ->
+                 as_map(Value);
+                (Key, Value) ->
+                 erlang:error(badarg, [Key, Value])
+             end,
+             M);
+as_map(L) when is_list(L) ->
+     [as_map(Value) || Value <- L];
+as_map(T) when ?IS_SIMPLE_JSON_TERM(T) -> T;
+as_map(T) -> erlang:error(badarg, [T]).
+
+
+-spec from_map(json_term()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @doc convert a JSON term with map-format JSON objects into an identical JSON
+%% term with all of the JSON objects converted into the default format
+%%------------------------------------------------------------------------------
+from_map(T) ->
+    from_map(T, []).
+
+
+-spec from_map(json_term(), jsn_options()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @doc convert a JSON term with map-format JSON objects into an identical JSON
+%% term with all of the JSON objects converted into the specified object format
+%%------------------------------------------------------------------------------
+from_map(M, Opts) -> 
+    from_map_impl(M, get_format(Opts), Opts).
+
+
 -spec as_proplist(json_term()) -> json_term().
 %%------------------------------------------------------------------------------
-%% @doc convert a jsn object (or list of them) into a proplist
+%% @doc convert any JSON objects in the input JSON term into proplist format
 %%------------------------------------------------------------------------------
 as_proplist(M) when is_map(M) ->
-    maps:fold(fun(Key, Value, Acc) ->
-                  [{to_binary(Key), as_proplist(Value)} | Acc]
+    maps:fold(fun(Key, Value, Acc) when ?IS_JSON_KEY(Key) ->
+                  [{Key, as_proplist(Value)} | Acc];
+                 (Key, Value, Acc) ->
+                  erlang:error(badarg, [Key, Value, Acc])
               end,
               [],
               M);
@@ -519,47 +582,35 @@ as_proplist([{struct, H}|T]) when is_list(H) ->
     [as_proplist(H) | as_proplist(T)];
 as_proplist([{H}|T]) when is_list(H) ->
     [as_proplist(H) | as_proplist(T)];
-as_proplist([{Key, Value}|T]) ->
-    [{to_binary(Key), as_proplist(Value)} | as_proplist(T)];
-as_proplist(List) when is_list(List) ->
-     [as_proplist(Value) || Value <- List];
-as_proplist(Value) -> Value.
+as_proplist([{_K, _V}|_T] = Plist) ->
+    lists:map(fun({Key, Value}) when ?IS_JSON_KEY(Key) ->
+                  {Key, as_proplist(Value)};
+                 (Element) -> erlang:error(badarg, [Element]) 
+              end,
+              Plist);
+as_proplist(T) when is_list(T) ->
+     [as_proplist(Value) || Value <- T];
+as_proplist(T) when ?IS_SIMPLE_JSON_TERM(T) -> T;
+as_proplist(T) -> erlang:error(badarg, [T]).
 
 
 -spec from_proplist(json_term()) -> json_term().
 %%------------------------------------------------------------------------------
-%% @doc convert a json_proplist (that may have atom keys) into a json_proplist
-%% with only binary keys
+%% @doc convert a JSON term with proplist-format JSON objects into an identical
+%% JSON term with all of the JSON objects converted into the default format
 %%------------------------------------------------------------------------------
-from_proplist(Object) ->
-    from_proplist(Object, []).
+from_proplist(T) ->
+    from_proplist(T, []).
 
 
 -spec from_proplist(json_term(), jsn_options()) -> json_term().
 %%------------------------------------------------------------------------------
-%% @doc convert a (maybe nested) proplist that is JSON-compliant (e.g.,
-%% from erlson decoding) into json_object using the given options
+%% @doc convert a JSON term with proplist-format JSON objects into an identical
+%% JSON term with all of the JSON objects converted into the specified object
+%% format
 %%------------------------------------------------------------------------------
-from_proplist([{_,_}|_] = P0, Options) ->
-    case get_format(Options) of
-        map ->
-            lists:foldl(fun({K,V}, Acc) ->
-                            Acc#{to_binary(K) => from_proplist(V, Options)}
-                        end,
-                        ?EMPTY_MAP,
-                        P0) 
-            ;
-        OtherFormat ->
-            P = [{to_binary(Key), from_proplist(Value, Options)} || {Key, Value} <- P0],
-            case OtherFormat of
-                proplist -> P;
-                struct -> {struct, P};
-                eep18 -> {P}
-            end
-    end;
-from_proplist(List, Options) when is_list(List) ->
-    [from_proplist(Value, Options) || Value <- List];
-from_proplist(X, _Options) -> X.
+from_proplist(T, Opts) ->
+    from_proplist_impl(T, get_format(Opts), Opts).
 
 %%==============================================================================
 %% internal functions
@@ -604,6 +655,67 @@ apply_selection({value, Path, Default}, Element) ->
     get(Path, Element, Default);
 apply_selection(Selection, Element) ->
     erlang:error(badarg, [Selection, Element]).
+
+
+-spec from_proplist_impl(json_term(), format(), jsn_options()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @private implement `from_proplist/2' with the format extracted
+%%------------------------------------------------------------------------------
+from_proplist_impl([{_,_}|_] = P, map, Opts) ->
+    M = maps:from_list(P),
+    maps:map(fun(Key, Value) when ?IS_JSON_KEY(Key) ->
+                 from_proplist_impl(Value, map, Opts);
+                (Key, Value) ->
+                 erlang:error(badarg, [Key, Value])
+             end,
+             M);
+from_proplist_impl([{_,_}|_] = P0, Format, Opts) ->
+    P = lists:map(fun({Key, Value}) when ?IS_JSON_KEY(Key) ->
+                      {Key, from_proplist_impl(Value, Format, Opts)};
+                     (Elem) -> erlang:error(badarg, [Elem]) 
+                  end,
+                  P0),
+    case Format of
+        proplist -> P;
+        struct -> {struct, P};
+        eep18 -> {P}
+    end;
+from_proplist_impl(L, Format, Opts) when is_list(L) ->
+    [from_proplist_impl(Value, Format, Opts) || Value <- L];
+from_proplist_impl(T, _Format, _Opts) when ?IS_SIMPLE_JSON_TERM(T) ->
+    T;
+from_proplist_impl(T, Format, Opts) ->
+    erlang:error(badarg, [T, Format, Opts]).
+
+
+-spec from_map_impl(json_term(), format(), jsn_options()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @doc implement `from_map/2' with the format extracted
+%%------------------------------------------------------------------------------
+from_map_impl(M, map, Opts) when is_map(M) ->
+    maps:map(fun(Key, Value) when ?IS_JSON_KEY(Key) ->
+                 from_map_impl(Value, map, Opts);
+                (Key, Value) -> erlang:error(badarg, [Key, Value]) 
+             end,
+             M);
+from_map_impl(M, Format, Opts) when is_map(M) ->
+    P = maps:fold(fun(Key, Value, Acc) when ?IS_JSON_KEY(Key) ->
+                      [{Key, from_map_impl(Value, Format, Opts)} | Acc];
+                     (Key, Value, Acc) -> erlang:error(badarg, [Key, Value, Acc])
+                  end,
+                  [],
+                  M),
+    case Format of
+        proplist -> P;
+        struct -> {struct, P};
+        eep18 -> {P}
+    end;
+from_map_impl(L, Format, Opts) when is_list(L) ->
+    [from_map_impl(Value, Format, Opts) || Value <- L];
+from_map_impl(T, _Format, _Opts) when ?IS_SIMPLE_JSON_TERM(T) ->
+    T;
+from_map_impl(T, Format, Opts) ->
+    erlang:error(badarg, [T, Format, Opts]).
 
 
 -spec get_format(jsn_options()) -> format().
