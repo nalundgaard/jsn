@@ -123,6 +123,8 @@ new_2_test_() ->
     Object2Plist = [{<<"foo">>, [{<<"bar">>, <<"hoge">>}]}],
     Object2Eep18 = {[{<<"foo">>, {[{<<"bar">>, <<"hoge">>}]}}]},
     Object2Struct = {struct, [{<<"foo">>, {struct, [{<<"bar">>, <<"hoge">>}]}}]},
+    Object3Struct = {struct, [{<<"foo">>, [{struct, [{<<"bar">>, <<"baz1">>}]},
+                                           {struct, [{<<"bar">>, <<"baz2">>}]}]}]},
     [?_assertEqual(?EMPTY_MAP, jsn:new([])),
      ?_assertEqual(?EMPTY_MAP, jsn:new([], [{format, map}])),
      ?_assertEqual(?EMPTY_PROPLIST, jsn:new([], [{format, proplist}])),
@@ -142,6 +144,10 @@ new_2_test_() ->
      ?_assertEqual(Object2Plist, jsn:new({[<<"foo">>, <<"bar">>], <<"hoge">>}, [{format, proplist}])),
      ?_assertEqual(Object2Eep18, jsn:new({<<"foo.bar">>, <<"hoge">>}, [{format, eep18}])),
      ?_assertEqual(Object2Struct, jsn:new({'foo.bar', <<"hoge">>}, [{format, struct}])),
+     ?_assertEqual(Object3Struct, jsn:new([{<<"foo">>, []},
+                                           {{<<"foo">>, 1, <<"bar">>}, <<"baz1">>},
+                                           {{<<"foo">>, 2, <<"bar">>}, <<"baz2">>}],
+                                          [{format, struct}])),
      ?_assertError(badarg, jsn:new([], [{format, random}]))].
 
 
@@ -790,13 +796,16 @@ get_nth_test_() ->
      ?_assertEqual(<<"a">>, jsn:get_nth(1, [<<"a">>], undefined)),
      ?_assertEqual(<<"a">>, jsn:get_nth(first, [<<"a">>], undefined)),
      ?_assertEqual(<<"a">>, jsn:get_nth(last, [<<"a">>], undefined)),
+     ?_assertEqual({struct, [{<<"a">>, <<"b">>}]},
+                   jsn:get_nth(1, [{struct, [{<<"a">>, <<"b">>}]}], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(0, [<<"a">>], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(first, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(last, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(10, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(-99, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(q, [], undefined)),
-     ?_assertEqual(undefined, jsn:get_nth(<<"a">>, [], undefined))].
+     ?_assertEqual(undefined, jsn:get_nth(<<"a">>, [], undefined)),
+     ?_assertThrow({error, {not_an_array, _}}, jsn:get_nth(1, [{<<"a">>, 1}], undefined))].
 
 
 path_to_binary_test_() ->
