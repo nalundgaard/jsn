@@ -920,13 +920,28 @@ key_get(_Key, _List, Default) ->
 %%------------------------------------------------------------------------------
 get_nth(_Index, [], Default) ->
     Default;
-get_nth(first, [H|_], _Default) when ?IS_SIMPLE_JSON_TERM(H) ->
-    H;
-get_nth(last, [H|_] = A, _Default) when ?IS_SIMPLE_JSON_TERM(H) ->
-    hd(lists:reverse(A));
-get_nth(Index, A, _Default) when Index > 0, Index =< length(A) ->
-    lists:nth(Index, A);
-get_nth(_Index, _A, Default) -> Default. 
+get_nth(first, [First|_], Default) ->
+    get_if_valid(First, Default);
+get_nth(last, A, Default) when is_list(A) ->
+    get_if_valid(lists:last(A), Default);
+get_nth(Index, A, Default) when Index > 0, Index =< length(A) ->
+    get_if_valid(lists:nth(Index, A), Default);
+get_nth(_Index, _A, Default) -> Default.
+
+
+-spec get_if_valid(Element :: json_term(),
+                   Default :: term()) -> json_term() | term().
+%%------------------------------------------------------------------------------
+%% @private helper function for get_nth/3. given an element of an array, if it
+%% is an element that can be an array member, return it. Otherwise, return the
+%% Default.
+%%------------------------------------------------------------------------------
+get_if_valid(T, _Default) when ?IS_SIMPLE_JSON_TERM(T) -> T;
+get_if_valid(M, _Default) when is_map(M) -> M;
+get_if_valid(P, _Default) when is_list(P) -> P;
+get_if_valid({P} = S, _Default) when is_list(P) -> S;
+get_if_valid({struct, P} = S, _Default) when is_list(P) -> S;
+get_if_valid(_, Default) -> Default.
 
 
 -spec path_equal(Path :: path(),
