@@ -796,16 +796,13 @@ get_nth_test_() ->
      ?_assertEqual(<<"a">>, jsn:get_nth(1, [<<"a">>], undefined)),
      ?_assertEqual(<<"a">>, jsn:get_nth(first, [<<"a">>], undefined)),
      ?_assertEqual(<<"a">>, jsn:get_nth(last, [<<"a">>], undefined)),
-     ?_assertEqual({struct, [{<<"a">>, <<"b">>}]},
-                   jsn:get_nth(1, [{struct, [{<<"a">>, <<"b">>}]}], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(0, [<<"a">>], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(first, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(last, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(10, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(-99, [], undefined)),
      ?_assertEqual(undefined, jsn:get_nth(q, [], undefined)),
-     ?_assertEqual(undefined, jsn:get_nth(<<"a">>, [], undefined)),
-     ?_assertThrow({error, {not_an_array, _}}, jsn:get_nth(1, [{<<"a">>, 1}], undefined))].
+     ?_assertEqual(undefined, jsn:get_nth(<<"a">>, [], undefined))].
 
 
 path_to_binary_test_() ->

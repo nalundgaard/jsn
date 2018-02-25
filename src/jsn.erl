@@ -920,8 +920,6 @@ key_get(_Key, _List, Default) ->
 %%------------------------------------------------------------------------------
 get_nth(_Index, [], Default) ->
     Default;
-get_nth(_Index, [{Tag, _}|_] = P, _Default) when Tag =/= struct ->
-    throw({error, {not_an_array, P}});
 get_nth(first, [H|_], _Default) when ?IS_SIMPLE_JSON_TERM(H) ->
     H;
 get_nth(last, [H|_] = A, _Default) when ?IS_SIMPLE_JSON_TERM(H) ->
