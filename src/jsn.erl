@@ -828,7 +828,7 @@ key_set(_Key, Term, _Value) ->
 %% the element with the given value; if the index is one greater than the
 %% array length, append a new entry
 %%------------------------------------------------------------------------------
-set_nth(_Index, [{_,_}|_] = P, _V) ->
+set_nth(_Index, [{Tag, _}|_] = P, _V) when Tag =/= struct ->
     throw({error, {not_an_array, P}});
 set_nth(First, [_H|T], jsn__delete) when First =:= 1; First =:= first ->
     T;

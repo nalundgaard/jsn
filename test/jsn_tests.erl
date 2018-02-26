@@ -123,6 +123,17 @@ new_2_test_() ->
     Object2Plist = [{<<"foo">>, [{<<"bar">>, <<"hoge">>}]}],
     Object2Eep18 = {[{<<"foo">>, {[{<<"bar">>, <<"hoge">>}]}}]},
     Object2Struct = {struct, [{<<"foo">>, {struct, [{<<"bar">>, <<"hoge">>}]}}]},
+    Object3Map = #{<<"foo">> => [#{<<"bar">> => <<"baz1">>},
+                                 #{<<"bar">> => <<"baz2">>}]},
+    Object3Plist = [{<<"foo">>, [[{<<"bar">>, <<"baz1">>}],
+                                 [{<<"bar">>, <<"baz2">>}]]}],
+    Object3Eep18 = {[{<<"foo">>, [{[{<<"bar">>, <<"baz1">>}]},
+                                  {[{<<"bar">>, <<"baz2">>}]}]}]},
+    Object3Struct = {struct, [{<<"foo">>, [{struct, [{<<"bar">>, <<"baz1">>}]},
+                                           {struct, [{<<"bar">>, <<"baz2">>}]}]}]},
+    Object3Paths = [{<<"foo">>, []},
+                    {{<<"foo">>, 1, <<"bar">>}, <<"baz1">>},
+                    {{<<"foo">>, 2, <<"bar">>}, <<"baz2">>}],
     [?_assertEqual(?EMPTY_MAP, jsn:new([])),
      ?_assertEqual(?EMPTY_MAP, jsn:new([], [{format, map}])),
      ?_assertEqual(?EMPTY_PROPLIST, jsn:new([], [{format, proplist}])),
@@ -142,6 +153,10 @@ new_2_test_() ->
      ?_assertEqual(Object2Plist, jsn:new({[<<"foo">>, <<"bar">>], <<"hoge">>}, [{format, proplist}])),
      ?_assertEqual(Object2Eep18, jsn:new({<<"foo.bar">>, <<"hoge">>}, [{format, eep18}])),
      ?_assertEqual(Object2Struct, jsn:new({'foo.bar', <<"hoge">>}, [{format, struct}])),
+     ?_assertEqual(Object3Map, jsn:new(Object3Paths, [{format, map}])),
+     ?_assertEqual(Object3Plist, jsn:new(Object3Paths, [{format, proplist}])),
+     ?_assertEqual(Object3Eep18, jsn:new(Object3Paths, [{format, eep18}])),
+     ?_assertEqual(Object3Struct, jsn:new(Object3Paths, [{format, struct}])),
      ?_assertError(badarg, jsn:new([], [{format, random}]))].
 
 
@@ -371,7 +386,7 @@ path_transform_test_() ->
     R2 = jsn:new([{<<"qux">>, 99},
                   {<<"baz">>, <<"bar">>}]),
     T1 = [{<<"foo">>, <<"baz">>}],
-    T2 = [{<<"foo">>, <<"baz">>}, {<<"map">>, <<"mop">>}], 
+    T2 = [{<<"foo">>, <<"baz">>}, {<<"map">>, <<"mop">>}],
     [?_assertEqual(R1, jsn:path_transform(T1, Src)),
      ?_assertEqual(R2, jsn:path_transform(T2, Src)),
      ?_assertError(badarg, jsn:path_transform(<<"not_a_transform">>, Src))].
