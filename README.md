@@ -52,6 +52,69 @@ to JSON objects without ambiguity.
 
 Future improvements to this library are TBD at this time.
 
+## Changelog
+
+27 February 2018 - 2.1.1
+
+* Resolved #24, jsn:new fails while making an array of objects in struct ( resolved by PR #25)
+* Improved jsn:get_nth behavior for arrays of objects (#26)
+
+6 November 2017 - 2.1.0
+
+* Implement `from_map/1,2` and `as_map/1` functions; these work similarly to the from/as_proplist suite.
+* Improve `from_proplist/1,2` converter:
+  *  Only extract the format from `Opts` input one time instead of N times.
+  * Stop converting keys to binary: This makes the function work more similarly to from/as_map, which doesn’t transform keys (allowing us to modify maps using `maps:map/2` instead of `maps:fold/3`)
+* Improve guards and error outputs on unexpected inputs in a number of  functions throughout the library: more consistent `badarg` errors instead of `case_clause`, `function_clause`, etc.
+* Add README examples of conversion functions
+* Fix README examples overlooked in change to map as the default format.
+
+6 October 2017 - 2.0.0
+
+* New default format: map
+* Remove compatibility with Erlang 17 and below.
+* Remove encode/decode functionality (no more jsonx dependency)
+* Remove key sorting functions
+
+3 October 2017 - 1.2.1
+
+* The `equal/3,4` functions were missing maps support due to a missing function clause.
+* Add `select/2,3` function documentation to README
+
+26 September 2017 - 1.2.0
+
+* fix rebar 2.x compatibility (#11)
+* adds select(#13)
+* improved errors (#14)
+
+24 August 2017 - 1.1.0
+
+* Introduce support for new map format
+* Deprecate Erlang 17 and lower
+* Deprecate jsn:sort/1, jsn:sort_keys/1, and jsn:sort_equal/2
+
+23 August 2017 - 1.0.3
+
+* Add hex metadata to .app.src
+* Deprecate encode/decode
+* Include jsonx as OTP application dependency for rebar3 release compatibility
+
+22 August 2017 - 1.0.2
+
+* Adds Erlang 20 support:
+  * Adds support for building with Erlang 20, with compiler warnings addressed (primarily in test module)
+  * Relaxes `require_otp_vsn` so that it will not explicitly exclude future Erlang versions
+
+6 November 2016 - 1.0.1
+
+* Adds Erlang 19 support:
+  * Spec format fixes, primarily, as well as a few spec clarifications.
+
+5 February 2016 - 1.0.0
+
+* Initial release of the jsn library
+
+
 ## Running 
 
 To run this library locally, build the source code:
