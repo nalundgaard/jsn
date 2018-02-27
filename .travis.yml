@@ -1,7 +1,7 @@
 language: erlang
 sudo: false
 otp_release:
-  - 20.1
+  - 20.2
   - 19.3
   - 18.3
 install: true
@@ -9,7 +9,4 @@ script:
   - ./rebar3 compile 
   - ./rebar3 eunit
   - ./rebar3 xref
-# maps support breaks edoc generation
-# TODO reinstate edoc generation with
-# jsn 2.0.0
-#  - ./rebar3 edoc
+  - ./rebar3 edoc
