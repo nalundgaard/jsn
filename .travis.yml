@@ -1,9 +1,10 @@
 language: erlang
 sudo: false
 otp_release:
-  - 20.2
+  - 22.0
+  - 21.3
+  - 20.3
   - 19.3
-  - 18.3
 install: true
 script:
   - ./rebar3 compile 
