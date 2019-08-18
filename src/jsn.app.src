@@ -1,6 +1,6 @@
 {application, jsn, [
     {description, "Utilities for interacting with decoded JSON in erlang"},
-    {vsn, "2.1.1"},
+    {vsn, "2.1.2"},
     {applications, [kernel,
                     stdlib
                    ]},
