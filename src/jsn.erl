@@ -454,21 +454,21 @@ equal(Paths, OriginalObject, OtherObjects, Mode) when is_list(OtherObjects) ->
 %% @doc given 2 json terms A and B in any format (eep18, struct, proplist, or
 %% map, if supported), return true if they are equivalent
 %%------------------------------------------------------------------------------
-is_equal(A, B) when is_map(A) ->
-    is_equal(maps:to_list(A), B);
-is_equal(A, B) when is_map(B) ->
-    is_equal(A, maps:to_list(B));
 is_equal({A}, B) when is_list(A) ->
-    is_equal(A, B);
+    is_equal(maps:from_list(A), B);
 is_equal({struct, A}, B) when is_list(A) ->
-    is_equal(A, B);
+    is_equal(maps:from_list(A), B);
 is_equal(A, {B}) when is_list(B) ->
-    is_equal(A, B);
+    is_equal(A, maps:from_list(B));
 is_equal(A, {struct, B}) when is_list(B) ->
-    is_equal(A, B);
-is_equal([{K0, V}|T] = _A, B) when is_binary(K0); is_atom(K0), K0 =/= struct ->
-    K = to_binary(K0),
-    is_equal(V, key_get(K, B)) andalso is_equal(T, keys_set([K], B, jsn__delete));
+    is_equal(A, maps:from_list(B));
+is_equal([{K, _V}|_T] = A, B) when is_binary(K); is_atom(K), K =/= struct ->
+    is_equal(maps:from_list(A), B);
+is_equal(A, [{K, _V}|_T] = B) when is_binary(K); is_atom(K), K =/= struct ->
+    is_equal(A, maps:from_list(B));
+is_equal(A, B) when is_map(A), is_map(B) ->
+    AKeys = maps:keys(A),
+    AKeys == maps:keys(B) andalso compare_maps(AKeys, fun is_equal/2, A, B);
 is_equal([HA|TA] = _A, [HB|TB] = _B) ->
     is_equal(HA, HB) andalso is_equal(TA, TB);
 is_equal(A, A) when ?IS_SIMPLE_JSON_TERM(A); A =:= [] ->
@@ -485,24 +485,24 @@ is_equal(_A, _B) ->
 %% CAUTION: this comparison treats json array comparisons as subset comparisons,
 %% not just object comparisons. so, `is_subset([1,1,1], [1,2])' is `true'
 %%------------------------------------------------------------------------------
-is_subset(A, B) when is_map(A) ->
-    is_subset(maps:to_list(A), B);
-is_subset(A, B) when is_map(B) ->
-    is_subset(A, maps:to_list(B));
 is_subset({A}, B) when is_list(A) ->
-    is_subset(A, B);
+    is_subset(maps:from_list(A), B);
 is_subset({struct, A}, B) when is_list(A) ->
-    is_subset(A, B);
+    is_subset(maps:from_list(A), B);
 is_subset(A, {B}) when is_list(B) ->
-    is_subset(A, B);
+    is_subset(A, maps:from_list(B));
 is_subset(A, {struct, B}) when is_list(B) ->
-    is_subset(A, B);
-is_subset([] = _A, B) when is_list(B) ->
-    true;
-is_subset([{K, V}|T] = _A, B) when is_binary(K); is_atom(K), K =/= struct ->
-    is_subset(V, key_get(K, B)) andalso is_subset(T, B);
+    is_subset(A, maps:from_list(B));
+is_subset([{K, _V}|_T] = A, B) when is_binary(K); is_atom(K), K =/= struct ->
+    is_subset(maps:from_list(A), B);
+is_subset(A, [{K, _V}|_T] = B) when is_binary(K); is_atom(K), K =/= struct ->
+    is_subset(A, maps:from_list(B));
+is_subset(A, B) when is_map(A), is_map(B) ->
+    compare_maps(maps:keys(A), fun is_subset/2, A, B);
 is_subset([H|T] = _A, B) when is_list(B)  ->
     lists:any(fun(X) -> is_subset(H, X) end, B) andalso is_subset(T, B);
+is_subset([] = _A, B) when is_map(B); is_list(B) ->
+    true;
 is_subset(A, A) when ?IS_SIMPLE_JSON_TERM(A) ->
     true;
 is_subset(_A, _B) ->
@@ -867,15 +867,6 @@ keys_get([Key | Rest], Object, Default) ->
 
 
 -spec key_get(path_element(),
-              json_term()) -> json_term() | undefined.
-%%------------------------------------------------------------------------------
-%% @private identical to `key_get/3', with a default of `undefined'.
-%%------------------------------------------------------------------------------
-key_get(Key, Object) ->
-    key_get(Key, Object, undefined).
-
-
--spec key_get(path_element(),
               json_term(),
               Default :: term()) -> json_term() | term().
 %%------------------------------------------------------------------------------
@@ -998,6 +989,24 @@ object_equal(Paths, OriginalObject, OtherObject, Mode) ->
                        MismatchedPaths/binary>>,
             {error, {not_equal, ErrMsg}}
     end.
+
+
+-spec compare_maps
+    (Keys :: [json_key()],
+     ComparisonFun :: fun((maps:map(), maps:map()) -> boolean()),
+     A :: maps:map(),
+     B :: maps:map()) ->
+    boolean().
+%%------------------------------------------------------------------------------
+%% @private compare the values of 2 Erlang maps for the given keys using the
+%% given comparison function
+%%------------------------------------------------------------------------------
+compare_maps([], _Fun, _A, _B) ->
+    true;
+compare_maps([Key | Keys], CompareFun, A, B) ->
+    maps:is_key(Key, B) andalso
+        CompareFun(maps:get(Key, A), maps:get(Key, B)) andalso
+            compare_maps(Keys, CompareFun, A, B).
 
 
 -spec safe_binary_to_atom(binary()) -> atom() | binary().
