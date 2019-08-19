@@ -1,7 +1,0 @@
-case erlang:function_exported(rebar3, main, 1) of
-    true -> % rebar3
-        CONFIG;
-    false -> % rebar 2.x or older
-        NewDeps = {deps, [{jsonx, "", {git, "https://github.com/alertlogic/jsonx.git", {branch, master}}}]},
-        lists:keyreplace(deps, 1, CONFIG, NewDeps)
-end.

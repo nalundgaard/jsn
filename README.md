@@ -54,6 +54,10 @@ Future improvements to this library are TBD at this time.
 
 ## Changelog
 
+18 August 2019 - 2.1.2
+
+* Remove unneeded rebar.config.script ([#31](https://github.com/nalundgaard/jsn/pull/31))
+
 27 February 2018 - 2.1.1
 
 * Resolved #24, jsn:new fails while making an array of objects in struct ( resolved by PR #25)
