@@ -54,6 +54,10 @@ Future improvements to this library are TBD at this time.
 
 ## Changelog
 
+19 August 2019 - 2.1.3
+
+* Refactor utility functions to use maps as the native format ([#32](https://github.com/nalundgaard/jsn/pull/32))
+
 18 August 2019 - 2.1.2
 
 * Remove unneeded rebar.config.script ([#31](https://github.com/nalundgaard/jsn/pull/31))
