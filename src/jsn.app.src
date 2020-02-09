@@ -4,7 +4,6 @@
     {applications, [kernel,
                     stdlib
                    ]},
-    {maintainers, ["Nicholas Lundgaard", "Mark Allen"]},
     {licenses, ["Apache 2"]},
     {links, [{"Github", "https://github.com/nalundgaard/jsn"}]}
  ]}.
