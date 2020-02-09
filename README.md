@@ -54,6 +54,10 @@ Future improvements to this library are TBD at this time.
 
 ## Changelog
 
+9 February 2020 - 2.1.4
+
+* Fix nested key deletion ([#34](https://github.com/nalundgaard/jsn/pull/34))
+
 19 August 2019 - 2.1.3
 
 * Refactor utility functions to use maps as the native format ([#32](https://github.com/nalundgaard/jsn/pull/32))
