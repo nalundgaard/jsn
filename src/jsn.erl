@@ -753,7 +753,7 @@ empty_object(Options) ->
               json_object() | json_array().
 %%------------------------------------------------------------------------------
 %% @private given a path as list of binary json_keys, a json_object, and a
-%% value, upsate the object at the location defined by the path to the given
+%% value, update the object at the location defined by the path to the given
 %% to be value, and return the updated object
 %%------------------------------------------------------------------------------
 keys_set(Keys, Object, Value) when is_map(Object) ->
@@ -785,6 +785,8 @@ keys_set(Keys, {P}, Value, Empty) when is_list(P) ->
 keys_set([Key | Rest], Object, Value, Empty)
   when is_binary(Key), (is_list(Object) orelse is_map(Object)) ->
     case key_get(Key, Object, jsn__undefined) of
+        E when Value =:= jsn__delete, (E =:= jsn__undefined orelse E =:= Empty) ->
+            return_if_object(Object, Empty);
         E when E =:= jsn__undefined; E =:= Empty ->
             key_set(Key, Object, keys_set(Rest, Empty, Value, Empty)); 
         SubValue ->
@@ -850,6 +852,22 @@ set_nth(_Index, Term, _V) when not(is_list(Term)) ->
     throw({error, {not_an_array, Term}});
 set_nth(Index, _A, _V) -> 
     throw({error, {invalid_array_index, Index}}).
+
+
+-spec return_if_object(MaybeObject :: json_object(),
+                       Empty :: json_object()) -> json_object().
+%%------------------------------------------------------------------------------
+%% @private given a MaybeObject and the Empty object for the format,
+%% return the object if it is one, or else throw a `not_an_object' error
+%%------------------------------------------------------------------------------
+return_if_object(M, _Empty) when is_map(M) ->
+    M;
+return_if_object([{_,_}|_] = P, _Empty) ->
+    P;
+return_if_object(Empty, Empty) ->
+    Empty;
+return_if_object(Term, _Empty) ->
+    throw({error, {not_an_object, Term}}).
 
 
 -spec keys_get(path_elements(),
