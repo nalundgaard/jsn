@@ -16,13 +16,15 @@
     get_list/2, get_list/3,
     find/3, find/4,
     select/2, select/3,
+    with/2, without/2,
     set/3, set_list/2,
     delete/2, delete_list/2,
     delete_if_equal/3,
     copy/3, copy/4,
     transform/2,
     path_transform/2,
-    path_elements/1
+    path_elements/1,
+    path_elements_map/1
 ]).
 %% comparison functions
 -export([equal/3, equal/4]).
@@ -198,6 +200,140 @@ select(Selection, Condition, Elements) when is_list(Elements) ->
     end, Elements);
 select(Selection, Conditions, Elements) ->
     erlang:error(badarg, [Selection, Conditions, Elements]).
+
+
+-spec with(paths() | path_elements_map(), json_term()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @doc return a new object with the given paths and their associated values
+%% from the given object; any path that does not exist in the object is ignored
+%%------------------------------------------------------------------------------
+with(Paths, JsonTerm) when is_list(Paths) ->
+    with(path_elements_map(Paths), JsonTerm);
+with(PathMap, JsonTerm) when is_map(PathMap) ->
+    with_impl(PathMap, JsonTerm);
+with(Paths, JsonTerm) ->
+    erlang:error(badarg, [Paths, JsonTerm]).
+
+
+-spec without(paths() | path_elements_map(), json_term()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @doc return a new object without the given paths and their associated values
+%% from the given object; any path does not exist in the given object is ignored
+%%------------------------------------------------------------------------------
+without(Paths, JsonTerm) when is_list(Paths) ->
+    without(path_elements_map(Paths), JsonTerm);
+without(PathMap, JsonTerm) when is_map(PathMap) ->
+    without_impl(PathMap, JsonTerm);
+without(Paths, JsonTerm) ->
+    erlang:error(badarg, [Paths, JsonTerm]).
+
+
+-spec with_impl(paths() | path_elements_map(), json_term()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @private internal implementation of `with/2'
+%%------------------------------------------------------------------------------
+with_impl(PathMap0, Object) when is_map(Object) ->
+    PathMap = maps:with(maps:keys(Object), PathMap0),
+    maps:fold(fun(K, true, Acc) ->
+                     Acc#{K => maps:get(K, Object)};
+                 (K, InnerPathMap, Acc) ->
+                     V = maps:get(K, Object),
+                     case with_impl(InnerPathMap, V) of
+                         R when map_size(R) > 0; length(R) > 0 ->
+                             Acc#{K => R};
+                         {struct, P} = R when length(P) > 0 ->
+                             Acc#{K => R};
+                         {P} = R when length(P) > 0 ->
+                             Acc#{K => R};
+                         _ ->
+                             Acc
+                     end
+              end,
+              #{},
+              PathMap);
+with_impl(PathMap, {P}) when is_list(P) ->
+    {with_impl(PathMap, P)};
+with_impl(PathMap, {struct, P}) when is_list(P) ->
+    {struct, with_impl(PathMap, P)};
+with_impl(PathMap, [{K, _V}|_] = PL) when K =/= struct ->
+    maps:to_list(with_impl(PathMap, maps:from_list(PL)));
+with_impl(_PathMap, []) ->
+    [];
+with_impl(PathMap0, Array) when is_list(Array) ->
+    ArrayLength = length(Array),
+    PathMap = get_array_index_map(PathMap0, ArrayLength),
+    IndexedArray = lists:zip(lists:seq(1, ArrayLength), Array),
+    lists:filtermap(fun({I, Element}) ->
+                        case maps:find(I, PathMap) of
+                            {ok, true} ->
+                                {true, Element};
+                            {ok, InnerMap} ->
+                                case with_impl(InnerMap, Element) of
+                                    R when map_size(R) > 0; length(R) > 0 ->
+                                        {true, R};
+                                    {struct, P} = R when length(P) > 0 ->
+                                        {true, R};
+                                    {P} = R when length(P) > 0 ->
+                                        {true, R};
+                                    _ ->
+                                        false
+                                end;
+                            error -> false
+                        end
+                    end,
+                    IndexedArray);
+with_impl(_PathMap, Value) when ?IS_SIMPLE_JSON_TERM(Value) ->
+    Value;
+with_impl(PathMap, Value) ->
+    erlang:error(badarg, [PathMap, Value]).
+
+
+-spec without_impl(paths() | path_elements_map(), json_term()) -> json_term().
+%%------------------------------------------------------------------------------
+%% @private internal implementation of `without/2'
+%%------------------------------------------------------------------------------
+without_impl(PathMap0, Object) when is_map(Object) ->
+    PathMap1 = maps:with(maps:keys(Object), PathMap0),
+    EdgePathKeys = maps:fold(fun(K, true, Acc) -> [K | Acc];
+                                (_K, _, Acc) -> Acc
+                             end,
+                             [],
+                             PathMap1),
+    PathMap = maps:without(EdgePathKeys, PathMap1),
+    maps:fold(fun(K, InnerPathMap, Acc) ->
+                  V = maps:get(K, Acc),
+                  Acc#{K => without_impl(InnerPathMap, V)}
+              end,
+              maps:without(EdgePathKeys, Object), PathMap);
+without_impl(PathMap, {P}) when is_list(P) ->
+    {without_impl(PathMap, P)};
+without_impl(PathMap, {struct, P}) when is_list(P) ->
+    {struct, without_impl(PathMap, P)};
+without_impl(PathMap, [{K, _V}|_] = PL) when K =/= struct ->
+    maps:to_list(without_impl(PathMap, maps:from_list(PL)));
+without_impl(_PathMap, []) ->
+    [];
+without_impl(PathMap0, Array) when is_list(Array) ->
+    ArrayLength = length(Array),
+    PathMap = get_array_index_map(PathMap0, ArrayLength),
+    IndexedArray = lists:zip(lists:seq(1, ArrayLength), Array),
+    lists:filtermap(fun({I, Element}) ->
+                        case maps:find(I, PathMap) of
+                            {ok, true} ->
+                                false;
+                            {ok, _InnerMap} when ?IS_SIMPLE_JSON_TERM(Element) ->
+                                {true, Element};
+                            {ok, InnerMap} ->
+                                {true, without_impl(InnerMap, Element)};
+                            error ->
+                                {true, Element}
+                        end
+                    end,
+                    IndexedArray);
+without_impl(_PathMap, Value) when ?IS_SIMPLE_JSON_TERM(Value) ->
+    Value;
+without_impl(PathMap, Value) ->
+    erlang:error(badarg, [PathMap, Value]).
 
 
 -spec set(path(), json_object(), Value :: json_term()) -> json_object();
@@ -388,6 +524,78 @@ path_elements(tuple, [Index | Rest], Acc) when Index =:= first; Index =:= last -
     path_elements(tuple, Rest, [Index | Acc]);
 path_elements(Type, Path, Acc) ->
     erlang:error(badarg, [Type, Path, Acc]).
+
+
+-spec path_elements_map(paths()) -> path_elements_map().
+%%------------------------------------------------------------------------------
+%% @doc given a list of paths, construct a unified map of the path elements of
+%% all the paths; leaf elements will end with the value `true'; path elements
+%% that are in the atom table will be multiplexed in the unified map, with both
+%% the binary and atom form of the path element; for use in `with/2' and
+%% `without/2'
+%%------------------------------------------------------------------------------
+path_elements_map(Paths) when is_list(Paths) ->
+    path_elements_map(Paths, #{});
+path_elements_map(Paths) ->
+    erlang:error(badarg, [Paths]).
+
+
+-spec path_elements_map(paths(),
+                        Acc :: path_elements_map()) -> path_elements_map().
+%%------------------------------------------------------------------------------
+%% @private tail-recursive form of `path_elements_map/1'
+%%------------------------------------------------------------------------------
+path_elements_map([], Acc) ->
+    Acc;
+path_elements_map([Path | Paths], Acc) ->
+    PathElements = path_elements(Path),
+    path_elements_map(Paths, add_path_elements_to_map(PathElements, Acc)).
+
+
+-spec add_path_elements_to_map(path_elements(),
+                               Acc :: path_elements_map()) ->
+    path_elements_map().
+%%------------------------------------------------------------------------------
+%% @private tail-recursive implementation of adding a single path to a
+%% path elements map
+%%------------------------------------------------------------------------------
+add_path_elements_to_map([PathElement], Acc) when is_binary(PathElement) ->
+    case safe_binary_to_atom(PathElement) of
+        P when P == PathElement ->
+            Acc#{PathElement => true};
+        AtomElement ->
+            Acc#{PathElement => true, AtomElement => true}
+    end;
+add_path_elements_to_map([PathElement], Acc) ->
+    Acc#{PathElement => true};
+add_path_elements_to_map([PathElement | PathElements], Acc0) when is_binary(PathElement) ->
+    Acc = case safe_binary_to_atom(PathElement) of
+              P when P == PathElement ->
+                  Acc0;
+              AtomElement ->
+                  add_nested_path_elements_to_map(AtomElement, PathElements, Acc0)
+          end,
+    add_nested_path_elements_to_map(PathElement, PathElements, Acc);
+add_path_elements_to_map([PathElement | PathElements], Acc) ->
+    add_nested_path_elements_to_map(PathElement, PathElements, Acc).
+
+
+-spec add_nested_path_elements_to_map(path_element(),
+                                      path_elements(),
+                                      Acc :: path_elements_map()) ->
+    path_elements_map().
+%%------------------------------------------------------------------------------
+%% @private nested form for adding a single path to a path elements map
+%%------------------------------------------------------------------------------
+add_nested_path_elements_to_map(PathElement, PathElements, Acc) ->
+    case maps:find(PathElement, Acc) of
+        {ok, true} ->
+            Acc;
+        {ok, ExistingElements} ->
+            Acc#{PathElement => add_path_elements_to_map(PathElements, ExistingElements)};
+        error ->
+            Acc#{PathElement => add_path_elements_to_map(PathElements, #{})}
+    end.
 
 %%==============================================================================
 %% comparison API
@@ -1025,6 +1233,28 @@ compare_maps([Key | Keys], CompareFun, A, B) ->
     maps:is_key(Key, B) andalso
         CompareFun(maps:get(Key, A), maps:get(Key, B)) andalso
             compare_maps(Keys, CompareFun, A, B).
+
+
+-spec get_array_index_map(path_elements_map(),
+                          ArrayLength :: non_neg_integer()) ->
+    path_elements_map().
+%%------------------------------------------------------------------------------
+%% @private given a path elements map, return a filtered path elements map where
+%% only valid (in range) array index keys are included; also maps `first'/`last'
+%% atom keys to `1'/`ArrayLength', respectively
+%%------------------------------------------------------------------------------
+get_array_index_map(PathMap, ArrayLength) ->
+    maps:fold(fun(first, V, Acc) ->
+                     Acc#{1 => V};
+                 (last, V, Acc) ->
+                     Acc#{ArrayLength => V};
+                 (I, V, Acc) when is_integer(I), I > 0, I =< ArrayLength ->
+                     Acc#{I => V};
+                 (_K, _V, Acc) ->
+                     Acc
+              end,
+              #{},
+              PathMap).
 
 
 -spec safe_binary_to_atom(binary()) -> atom() | binary().
