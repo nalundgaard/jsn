@@ -54,6 +54,10 @@ Future improvements to this library are TBD at this time.
 
 ## Changelog
 
+9 June 2020 - 2.2.0
+
+* Add `with/2` and `without/2` ([#36](https://github.com/nalundgaard/jsn/pull/36))
+
 9 February 2020 - 2.1.4
 
 * Fix nested key deletion ([#34](https://github.com/nalundgaard/jsn/pull/34))
@@ -245,7 +249,7 @@ jsn:new([{'user.id', <<"123">>},
 %                                  {<<"name">>,<<"John">>}]}}]}
 ```
 
-### `get/2,3`, `get_list/2,3`, `find/3,4`, and `select/2,3` - Extract data from objects
+### `get/2,3`, `get_list/2,3`, `find/3,4`, `select/2,3`, `with/2`, and `without/2` - Extract data from objects
 
 * `get(Path, Object)` - Return the value at Path in the Object, or `undefined`
   if it is missing.
@@ -268,6 +272,16 @@ jsn:new([{'user.id', <<"123">>},
   correspondent to the given list, with elements that do not meet the given
   conditions filtered out. See [below](#selections-conditions) for more
   information about `Selections` and `Conditions`.
+* `with(Paths, Object)` - Return a new object with the given paths and their
+  associated values from the given object. Any path that does not exist in the
+  object is ignored. Essentially, this is
+  [`maps:with/2`](https://erlang.org/doc/man/maps.html#with-2) with support for
+  nested paths. See [below](#with-without) for more information.
+* `without(Paths, Object)` - Returns a new object without the given paths and
+  their associated values from the given object. Any path does not exist in the
+  given object is ignored. Essentially, this is
+  [`maps:without/2`](https://erlang.org/doc/man/maps.html#without-2) with
+  support for nested paths. See [below](#with-without) for more information.
 
 #### <a name="selections-conditions"/>Selections and Conditions in `select/2,3`
 
@@ -383,6 +397,126 @@ jsn:select({value, [<<"user">>, <<"id">>]},
            [ConditionFun],
            [User, User2]).
 % [<<"456">>]
+```
+
+#### <a name="with-without"/>Using `with/2` and `without/2`
+
+The functions `with/2` and `without/3` accept a list of `path()`s or a
+`path_elements_map()` defined in [jsn.hrl](include/jsn.hrl). These functions
+are inspired by [`maps:with/2`](https://erlang.org/doc/man/maps.html#with-2) and
+[`maps:without/2`](https://erlang.org/doc/man/maps.html#without-2), but support
+the nested path formats of this library. Essentially, you can pass a list of
+arbitrarily nested paths to either function, and they will return your input
+with those paths applied, either by including **only** those paths in the input
+in the case of `with/2`, or removing those paths from the input in the case of
+`without/2`.
+
+However, because nested paths are a little more complex than working with the
+flat keys list of the `maps` analogues of these functions, there are some
+caveats and specific aspects to be aware of when using these functions.
+
+* When using `with/2` or `without/2` for sets of objects, or reusing it
+  regularly, it is recommended to 'compile' your `Paths` input using
+  `jsn:path_elements_map(Paths)`, and pass the resulting map directly to the
+  functions. If this isn't done, the `Paths` will be parsed into this structure
+  on every iteration.
+* **Use caution with atom keys in objects**. These functions use the function
+  `jsn:path_elements_map(Paths)` to construct a structure for the nested
+  traversals of the object, and for overall performance, it checks for the
+  possibility that any individual key could be an atom when constructing that
+  structure. That means that if you call this function before constructing your
+  object, and you use new atoms when doing so, those atom-keyed path elements
+  may not be included (or excluded) as expected. If your objects have atoms,
+  it is recommended to ensure all atoms are referenced in the system (i.e., in
+  the VM's atom table) prior to calling `jsn:path_elements_map(Paths)`. However,
+  using atom keys in your object structure is generally discouraged.
+
+See [below](#with-without-examples) for examples.
+
+#### <a name="with-without-examples"/>Examples
+
+```erlang
+User = jsn:new([{'user.activated', true},
+                {'user.hobbies', [#{<<"type">> => <<"food">>,
+                                    <<"name">> => <<"bread">>},
+                                  #{<<"type">> => <<"drink">>,
+                                    <<"name">> => <<"wine">>}]},
+                {'user.id', <<"123">>},
+                {'user.name.first', <<"Jane">>},
+                {'user.name.last', <<"Doe">>},
+                {'user.password_hash', <<"9S+9MrKzuG/4jvbEkGKChfSCrxXdyylUH5S89Saj9sc=">>}]).
+% #{<<"user">> =>
+%       #{<<"activated">> => true,
+%         <<"hobbies">> =>
+%             [#{<<"name">> => <<"bread">>,
+%                <<"type">> => <<"food">>},
+%              #{<<"name">> => <<"wine">>,
+%                <<"type">> => <<"drink">>}],
+%         <<"id">> => <<"123">>,
+%         <<"name">> =>
+%             #{<<"first">> => <<"Jane">>,
+%               <<"last">> => <<"Doe">>},
+%         <<"password_hash">> =>
+%             <<"9S+9MrKzuG/4jvbEkGKChfSCrxXdyylUH5S89Saj9sc=">>}}
+
+% get the user with just the user's name
+UserWithName = jsn:with(['user.name'], User).
+% #{<<"user">> =>
+%       #{<<"name">> =>
+%             #{<<"first">> => <<"Jane">>,
+%               <<"last">> => <<"Doe">>}}}
+
+% get the user with just the user's id and first hobby name
+UserWithIdAndHobby = jsn:with(['user.id',
+                               {<<"user">>, <<"hobbies">>, 1, <<"name">>}],
+                              User).
+% #{<<"user">> =>
+%       #{<<"hobbies">> => [#{<<"name">> => <<"bread">>}],
+%         <<"id">> => <<"123">>}}
+
+% get the user without her password hash or hobby types
+UserWithoutPassHash = jsn:without(['user.password_hash',
+                                   {<<"user">>, <<"hobbies">>, 1, <<"type">>},
+                                   {<<"user">>, <<"hobbies">>, 2, <<"type">>}], User).
+% #{<<"user">> =>
+%       #{<<"activated">> => true,
+%         <<"hobbies">> =>
+%             [#{<<"name">> => <<"bread">>},
+%              #{<<"name">> => <<"wine">>}],
+%         <<"id">> => <<"123">>,
+%         <<"name">> =>
+%             #{<<"first">> => <<"Jane">>,
+%               <<"last">> => <<"Doe">>}}}
+
+% pre-build a tree of path elements that includes atoms
+PathMap1 = jsn:path_elements_map([[user, id],
+                                  [user, name],
+                                  {<<"user">>, <<"hobbies">>, first}]).
+% #{user =>
+%       #{hobbies => #{first => true},
+%         id => true,
+%         name => true,
+%         <<"hobbies">> => #{first => true},
+%         <<"id">> => true,
+%         <<"name">> => true},
+%   <<"user">> =>
+%       #{hobbies => #{first => true},
+%         id => true,
+%         name => true,
+%         <<"hobbies">> => #{first => true},
+%         <<"id">> => true,
+%         <<"name">> => true}}
+
+% use a pre-built path elements map
+UserWithNameAndIdAndFirstHobby = jsn:with(PathMap1, User).
+% #{<<"user">> =>
+%       #{<<"hobbies">> =>
+%             [#{<<"name">> => <<"bread">>,
+%                <<"type">> => <<"food">>}],
+%         <<"id">> => <<"123">>,
+%         <<"name">> =>
+%             #{<<"first">> => <<"Jane">>,
+%               <<"last">> => <<"Doe">>}}}
 ```
 
 ### `set/3` and `set_list/2` - Add to and update existing objects

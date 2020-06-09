@@ -21,7 +21,7 @@
 -type json_proplist()      :: [{json_key(), json_term()}].
 -type json_eep18()         :: {json_proplist()}.
 -type json_struct()        :: {struct, json_proplist()}.
--type json_object()        :: json_map() |json_proplist() | json_eep18() | json_struct().
+-type json_object()        :: json_map() | json_proplist() | json_eep18() | json_struct().
 -type json_term()          :: json_string() | json_number() | json_array() |
                               json_null()   | json_boolean() | json_object().
 
@@ -57,6 +57,7 @@
 
 -type path_element() ::  binary() | json_array_index().
 -type path_elements() :: [ path_element() ].
+-type path_elements_map() :: #{path_element() => true | path_elements_map()}.
 
 %% Select types
 %%
