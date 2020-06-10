@@ -1,8 +1,8 @@
-%%------------------------------------------------------------------------------
+%%
 %% jsn - Functions for interacting with decoded JSON objects 
 %%
 %% @author Nicholas Lundgaard <nalundgaard@gmail.com>
-%%------------------------------------------------------------------------------
+%%
 -module(jsn).
 
 -author("Nicholas Lundgaard <nalundgaard@gmail.com>").
@@ -71,27 +71,27 @@
 %%==============================================================================
 
 -spec new() -> json_object().
-%%------------------------------------------------------------------------------
+%%
 %% @doc return an empty json_object in the default format
-%%------------------------------------------------------------------------------
+%%
 new() ->
     empty_object([]).
 
 -spec new(path_value_tuple() | path_value_tuples() ) ->  json_object().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path, value tuple or a list of such tuples, return a new
 %% json_object in the default format with the given path(s) and value(s)
-%%------------------------------------------------------------------------------
+%%
 new(L) ->
     new(L, []).
 
 
 -spec new(path_value_tuple() | path_value_tuples(), 
           jsn_options()) -> json_object().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path, value tuple or a list of such tuples, return a new
 %% json_object with the given path(s) and value(s)
-%%------------------------------------------------------------------------------
+%%
 new(L, Options) when is_tuple(L) ->
     new([L], Options);
 
@@ -101,19 +101,19 @@ new(L, Options) when is_list(L) ->
 
 -spec get(path(), json_object() | json_array()) -> 
          json_term() | undefined.
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path and a json_object, if the path is in the object, return
 %% the value at the path. Otherwise, return undefined
-%%------------------------------------------------------------------------------
+%%
 get(Path, Object) ->
     get(Path, Object, undefined).
 
 
 -spec get(path(), json_term(), term()) -> json_term() | term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path and a json_object, if the path is in the object, return
 %% the value at the path. Otherwise, return Default
-%%------------------------------------------------------------------------------
+%%
 get(Path, Object, Default) ->
     Keys = path_elements(Path),
     try
@@ -125,10 +125,10 @@ get(Path, Object, Default) ->
 
 
 -spec get_list(paths(), json_term()) -> [ json_term() | undefined ].
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of paths and a json_object, return the values found
 %% at each path in a list; if a path does not exist, return `undefined'
-%%------------------------------------------------------------------------------
+%%
 get_list(PathList, Object) ->
     get_list(PathList, Object, undefined).
 
@@ -136,10 +136,10 @@ get_list(PathList, Object) ->
 -spec get_list(paths(),
                json_term(),
                Default :: term()) -> [ json_term() | term() ].
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of paths and a json_object, return the values found
 %% at each path in a list; if a path does not exist, return `undefined'
-%%------------------------------------------------------------------------------
+%%
 get_list(PathList, Object, Default) ->
     lists:map(fun(Path) ->
                   get(Path, Object, Default)
@@ -150,10 +150,10 @@ get_list(PathList, Object, Default) ->
 -spec find(path(), 
            SearchTerm :: json_term(),
            json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path, search term, and a list of json objects, find all the
 %% elements of the list where the path in the element matches the search term
-%%------------------------------------------------------------------------------
+%%
 find(Path, Value, Objects) ->
     lists:filter(fun(E) ->
                      get(Path, E) == Value
@@ -165,30 +165,30 @@ find(Path, Value, Objects) ->
            Subpath :: path(),
            SearchTerm :: json_term(),
            json_object() | json_array() ) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path, a subpath to be search objects in that list, a search
 %% term, and an object containing a list of objects at the given path, find all
 %% the elements of the list where the path in the element matches the given
 %% search term
-%%------------------------------------------------------------------------------
+%%
 find(Path, Subpath, SearchTerm, Object) ->
     find(Subpath, SearchTerm, get(Path, Object)).
 
 
 -spec select(selection()|selections(), json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc Transforms a list of Elements according to a given Selectionification
-%%------------------------------------------------------------------------------
+%%
 select(Selection, Elements) ->
     select(Selection, [], Elements).
 
 -spec select(selection()|selections(),
              condition()|conditions(),
              json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc Same as select/2 but it first filters the elements according to a given
 %% list of Conditions
-%%------------------------------------------------------------------------------
+%%
 select(Selection, Condition, Elements) when is_list(Elements) ->
     lists:filtermap(fun(Element) ->
         case apply_conditions(Condition, Element) of
@@ -203,10 +203,10 @@ select(Selection, Conditions, Elements) ->
 
 
 -spec with(paths() | path_elements_map(), json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc return a new object with the given paths and their associated values
 %% from the given object; any path that does not exist in the object is ignored
-%%------------------------------------------------------------------------------
+%%
 with(Paths, JsonTerm) when is_list(Paths) ->
     with(path_elements_map(Paths), JsonTerm);
 with(PathMap, JsonTerm) when is_map(PathMap) ->
@@ -216,10 +216,10 @@ with(Paths, JsonTerm) ->
 
 
 -spec without(paths() | path_elements_map(), json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc return a new object without the given paths and their associated values
 %% from the given object; any path does not exist in the given object is ignored
-%%------------------------------------------------------------------------------
+%%
 without(Paths, JsonTerm) when is_list(Paths) ->
     without(path_elements_map(Paths), JsonTerm);
 without(PathMap, JsonTerm) when is_map(PathMap) ->
@@ -229,9 +229,9 @@ without(Paths, JsonTerm) ->
 
 
 -spec with_impl(paths() | path_elements_map(), json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @private internal implementation of `with/2'
-%%------------------------------------------------------------------------------
+%%
 with_impl(PathMap0, Object) when is_map(Object) ->
     PathMap = maps:with(maps:keys(Object), PathMap0),
     maps:fold(fun(K, true, Acc) ->
@@ -289,9 +289,9 @@ with_impl(PathMap, Value) ->
 
 
 -spec without_impl(paths() | path_elements_map(), json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @private internal implementation of `without/2'
-%%------------------------------------------------------------------------------
+%%
 without_impl(PathMap0, Object) when is_map(Object) ->
     PathMap1 = maps:with(maps:keys(Object), PathMap0),
     EdgePathKeys = maps:fold(fun(K, true, Acc) -> [K | Acc];
@@ -338,41 +338,41 @@ without_impl(PathMap, Value) ->
 
 -spec set(path(), json_object(), Value :: json_term()) -> json_object();
          (path(), json_array(), Value :: json_term()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path, value, and a json_object, return a new json_object
 %% containing the path and value
-%%------------------------------------------------------------------------------
+%%
 set(Path, Object, Value) ->
     keys_set(path_elements(Path), Object, Value).
 
 
 -spec set_list(path_value_tuples(), json_object()) -> json_object();
               (path_value_tuples(), json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of `{Path, Value}' tuples, apply the `set/3' function
 %% to the each path and value pair with the given object, and return the result
-%%------------------------------------------------------------------------------
+%%
 set_list(TupleList, Object) ->
     lists:foldl(fun({K, V}, Acc) -> set(K, Acc, V) end, Object, TupleList).
 
 
 -spec delete(path(), json_object()) -> json_object();
             (path(), json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path and a json_object, if the path is in the object, return
 %% a new json_object identical to the given one, with the exception that it
 %% does not contain the path, value pair referred to by the input path
-%%------------------------------------------------------------------------------
+%%
 delete(Path, Object) ->
     keys_set(path_elements(Path), Object, jsn__delete).
 
 
 -spec delete_list(paths(), json_object()) -> json_object();
                  (paths(), json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of paths and a json_object, apply delete/2 to each path
 %% on the same json_object and return the result
-%%------------------------------------------------------------------------------
+%%
 delete_list(PathList, Object) ->
     lists:foldl(fun(Path, Acc) -> delete(Path, Acc) end, Object, PathList).
 
@@ -380,11 +380,11 @@ delete_list(PathList, Object) ->
 -spec delete_if_equal
      (path(), ValueOrValues :: json_term(), json_object()) -> json_object();
      (path(), ValueOrValues :: json_term(), json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path, a value or list of values, and a json term, check if the
 %% path contains any of the given Value(s); if so, delete the path from the
 %% object
-%%------------------------------------------------------------------------------
+%%
 delete_if_equal(Path, Values, Object) when is_list(Values) ->
     Val = get(Path, Object),
     case lists:member(Val, Values) orelse Val =:= Values of
@@ -398,7 +398,7 @@ delete_if_equal(Path, Value, Object) ->
 -spec copy(paths(),
            SrcObject :: json_object() | json_array(),
            DstObjects :: json_object() | json_array()) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of paths, a source object/array and one or more destination 
 %% objects/arrays, copy the path-value pairs from the source to the 
 %% destination(s), and return a list with the results
@@ -407,7 +407,7 @@ delete_if_equal(Path, Value, Object) ->
 %% atom `undefined' as the value
 %%
 %% this function always returns a list of objects
-%%------------------------------------------------------------------------------
+%%
 copy(PathList, Src, Dst) ->
     copy(PathList, Src, Dst, fun(Value) -> Value end).
 
@@ -417,7 +417,7 @@ copy(PathList, Src, Dst) ->
       SrcObject :: json_object() | json_array(),
       DstObjects :: json_object() | json_array(),
       Mutator :: fun((json_term() | undefined) -> json_term())) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of paths, a source json_object and one or more destination
 %% json_objects, retrieve the value from the source object at the current path, 
 %% pass it through the mutator function, and store it on the destination
@@ -428,7 +428,7 @@ copy(PathList, Src, Dst) ->
 %% to handle a value of `undefined'
 %%
 %% this function always returns a list of objects
-%%------------------------------------------------------------------------------
+%%
 copy(PathList, Src, [], Mutate) ->
     copy(PathList, Src, [[]], Mutate);
 copy(PathList, Src, [{K,_}|_] = P, Mutate) when K =/= struct ->
@@ -452,14 +452,14 @@ copy(PathList, Src, Dst, Mutator) ->
 
 -spec transform(Transforms :: [{path(), fun((json_term()) -> json_term())}],
                 json_object()) -> json_object().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of transforms as `{path, fun/1}', modify the input object
 %% by retrieving the value in the path, applying the given function and saving
 %% the result into a new return object
 %%
 %% it's possible that the given path may specify a value that is not present;
 %% if so, the transformation function will be given a value of `undefined'
-%%------------------------------------------------------------------------------
+%%
 transform(Transforms, Object) when is_list(Transforms) ->
     lists:foldl(
         fun({Path, Transform}, Acc) ->
@@ -473,7 +473,7 @@ transform(Transforms, Object) ->
 
 -spec path_transform(Transforms :: [ {path(), path()} ],
                      json_object())  ->  json_object().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of path transforms as `{old_path, new_path}', modify the
 %% input object by renaming the old path to the new path and saving
 %% the result into a new return object
@@ -482,7 +482,7 @@ transform(Transforms, Object) ->
 %% transformation will replace the existing path with the old path value
 %%
 %% if the old_path is not present, the existing object will be return
-%%------------------------------------------------------------------------------
+%%
 path_transform(Transforms, Object) when is_list(Transforms) ->
     lists:foldl(fun({OldPath, NewPath}, Acc) ->
                     case get(OldPath, Object, jsn__undefined) of
@@ -497,10 +497,10 @@ path_transform(Transforms, Object) ->
 
 
 -spec path_elements(path()) -> path_elements().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a path, parse it into an ordered list of json keys (binary) and/or 
 %% array indexes
-%%------------------------------------------------------------------------------
+%%
 path_elements(Path) when is_binary(Path) ->
     binary:split(Path, <<".">>, [global]);
 path_elements(Path) when is_atom(Path) ->
@@ -527,13 +527,13 @@ path_elements(Type, Path, Acc) ->
 
 
 -spec path_elements_map(paths()) -> path_elements_map().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of paths, construct a unified map of the path elements of
 %% all the paths; leaf elements will end with the value `true'; path elements
 %% that are in the atom table will be multiplexed in the unified map, with both
 %% the binary and atom form of the path element; for use in `with/2' and
 %% `without/2'
-%%------------------------------------------------------------------------------
+%%
 path_elements_map(Paths) when is_list(Paths) ->
     path_elements_map(Paths, #{});
 path_elements_map(Paths) ->
@@ -542,9 +542,9 @@ path_elements_map(Paths) ->
 
 -spec path_elements_map(paths(),
                         Acc :: path_elements_map()) -> path_elements_map().
-%%------------------------------------------------------------------------------
+%%
 %% @private tail-recursive form of `path_elements_map/1'
-%%------------------------------------------------------------------------------
+%%
 path_elements_map([], Acc) ->
     Acc;
 path_elements_map([Path | Paths], Acc) ->
@@ -555,10 +555,10 @@ path_elements_map([Path | Paths], Acc) ->
 -spec add_path_elements_to_map(path_elements(),
                                Acc :: path_elements_map()) ->
     path_elements_map().
-%%------------------------------------------------------------------------------
+%%
 %% @private tail-recursive implementation of adding a single path to a
 %% path elements map
-%%------------------------------------------------------------------------------
+%%
 add_path_elements_to_map([PathElement], Acc) when is_binary(PathElement) ->
     case safe_binary_to_atom(PathElement) of
         P when P == PathElement ->
@@ -584,9 +584,9 @@ add_path_elements_to_map([PathElement | PathElements], Acc) ->
                                       path_elements(),
                                       Acc :: path_elements_map()) ->
     path_elements_map().
-%%------------------------------------------------------------------------------
+%%
 %% @private nested form for adding a single path to a path elements map
-%%------------------------------------------------------------------------------
+%%
 add_nested_path_elements_to_map(PathElement, PathElements, Acc) ->
     case maps:find(PathElement, Acc) of
         {ok, true} ->
@@ -606,14 +606,14 @@ add_nested_path_elements_to_map(PathElement, PathElements, Acc) ->
       Original :: json_object() | json_array(),
       OtherOrOthers :: json_object() | json_array()) ->
      ok | {error, {not_equal, Message :: binary() }}.
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of paths, an original json_object, and a single or
 %% list of new json_objects, verify that each path in each of the other
 %% object(s) has the same value as the original does at the same path, for
 %% each path in the list of paths; if so, return ok; otherwise, return an
 %% error tuple with the error type and a summary of mismatches for the
 %% first mismatched object
-%%------------------------------------------------------------------------------
+%%
 equal(Paths, OriginalObject, OtherObjectOrObjects) ->
     equal(Paths, OriginalObject, OtherObjectOrObjects, hard).
 
@@ -624,7 +624,7 @@ equal(Paths, OriginalObject, OtherObjectOrObjects) ->
       OtherObjectOrObjects :: json_object() | json_array(),
       Mode :: soft | hard) -> 
      ok | {error, {not_equal, Message :: binary() }}.
-%%------------------------------------------------------------------------------
+%%
 %% @doc given a list of fields, an original json_object, and a single or
 %% list of new json_objects, verify that each path in each of the other
 %% object(s) has the same value as the original does at the same path, for
@@ -634,7 +634,7 @@ equal(Paths, OriginalObject, OtherObjectOrObjects) ->
 %%
 %% if mode is soft, a mismatch is allowed if the value is missing from any of
 %% the new objects
-%%------------------------------------------------------------------------------
+%%
 equal(Paths, OriginalObject, [], Mode) ->
     object_equal(Paths, OriginalObject, [], Mode);
 equal(Paths, OriginalObject, [{K,_}|_] = P, Mode) when K =/= struct ->
@@ -658,10 +658,10 @@ equal(Paths, OriginalObject, OtherObjects, Mode) when is_list(OtherObjects) ->
 
 
 -spec is_equal(json_term(), json_term()) -> boolean().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given 2 json terms A and B in any format (eep18, struct, proplist, or
 %% map, if supported), return true if they are equivalent
-%%------------------------------------------------------------------------------
+%%
 is_equal({A}, B) when is_list(A) ->
     is_equal(maps:from_list(A), B);
 is_equal({struct, A}, B) when is_list(A) ->
@@ -686,13 +686,13 @@ is_equal(_A, _B) ->
 
 
 -spec is_subset(A :: json_term(), B :: json_term()) ->  boolean().
-%%------------------------------------------------------------------------------
+%%
 %% @doc given 2 json terms A and B in any format (eep18, struct, proplist),
 %% return true if all the value(s) in A are present in B
 %%
 %% CAUTION: this comparison treats json array comparisons as subset comparisons,
 %% not just object comparisons. so, `is_subset([1,1,1], [1,2])' is `true'
-%%------------------------------------------------------------------------------
+%%
 is_subset({A}, B) when is_list(A) ->
     is_subset(maps:from_list(A), B);
 is_subset({struct, A}, B) when is_list(A) ->
@@ -721,9 +721,9 @@ is_subset(_A, _B) ->
 %%==============================================================================
 
 -spec as_map(json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc convert any JSON objects in the input JSON term into map format
-%%------------------------------------------------------------------------------
+%%
 as_map(M) when is_map(M) ->
     maps:map(fun(Key, Value) when ?IS_JSON_KEY(Key) ->
                  as_map(Value);
@@ -753,27 +753,27 @@ as_map(T) -> erlang:error(badarg, [T]).
 
 
 -spec from_map(json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc convert a JSON term with map-format JSON objects into an identical JSON
 %% term with all of the JSON objects converted into the default format
-%%------------------------------------------------------------------------------
+%%
 from_map(T) ->
     from_map(T, []).
 
 
 -spec from_map(json_term(), jsn_options()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc convert a JSON term with map-format JSON objects into an identical JSON
 %% term with all of the JSON objects converted into the specified object format
-%%------------------------------------------------------------------------------
+%%
 from_map(M, Opts) -> 
     from_map_impl(M, get_format(Opts), Opts).
 
 
 -spec as_proplist(json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc convert any JSON objects in the input JSON term into proplist format
-%%------------------------------------------------------------------------------
+%%
 as_proplist(M) when is_map(M) ->
     maps:fold(fun(Key, Value, Acc) when ?IS_JSON_KEY(Key) ->
                   [{Key, as_proplist(Value)} | Acc];
@@ -803,20 +803,20 @@ as_proplist(T) -> erlang:error(badarg, [T]).
 
 
 -spec from_proplist(json_term()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc convert a JSON term with proplist-format JSON objects into an identical
 %% JSON term with all of the JSON objects converted into the default format
-%%------------------------------------------------------------------------------
+%%
 from_proplist(T) ->
     from_proplist(T, []).
 
 
 -spec from_proplist(json_term(), jsn_options()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc convert a JSON term with proplist-format JSON objects into an identical
 %% JSON term with all of the JSON objects converted into the specified object
 %% format
-%%------------------------------------------------------------------------------
+%%
 from_proplist(T, Opts) ->
     from_proplist_impl(T, get_format(Opts), Opts).
 
@@ -866,9 +866,9 @@ apply_selection(Selection, Element) ->
 
 
 -spec from_proplist_impl(json_term(), format(), jsn_options()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @private implement `from_proplist/2' with the format extracted
-%%------------------------------------------------------------------------------
+%%
 from_proplist_impl([{_,_}|_] = P, map, Opts) ->
     M = maps:from_list(P),
     maps:map(fun(Key, Value) when ?IS_JSON_KEY(Key) ->
@@ -897,9 +897,9 @@ from_proplist_impl(T, Format, Opts) ->
 
 
 -spec from_map_impl(json_term(), format(), jsn_options()) -> json_term().
-%%------------------------------------------------------------------------------
+%%
 %% @doc implement `from_map/2' with the format extracted
-%%------------------------------------------------------------------------------
+%%
 from_map_impl(M, map, Opts) when is_map(M) ->
     maps:map(fun(Key, Value) when ?IS_JSON_KEY(Key) ->
                  from_map_impl(Value, map, Opts);
@@ -927,9 +927,9 @@ from_map_impl(T, Format, Opts) ->
 
 
 -spec get_format(jsn_options()) -> format().
-%%------------------------------------------------------------------------------
+%%
 %% @private given jsn options, get the selected format
-%%------------------------------------------------------------------------------
+%%
 get_format(Options) ->
     case lists:keyfind(format, 1, Options) of
         {_, map}      -> map;
@@ -943,9 +943,9 @@ get_format(Options) ->
 
 
 -spec empty_object(jsn_options()) -> json_object().
-%%------------------------------------------------------------------------------
+%%
 %% @private create a new json_object in the specified format
-%%------------------------------------------------------------------------------
+%%
 empty_object(Options) ->
     case get_format(Options) of
         map      -> ?EMPTY_MAP;
@@ -959,11 +959,11 @@ empty_object(Options) ->
                Object :: json_object() | json_array(), 
                Value :: json_term() | jsn__delete) ->
               json_object() | json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @private given a path as list of binary json_keys, a json_object, and a
 %% value, update the object at the location defined by the path to the given
 %% to be value, and return the updated object
-%%------------------------------------------------------------------------------
+%%
 keys_set(Keys, Object, Value) when is_map(Object) ->
     keys_set(Keys, Object, Value, empty_object([{format, map}]));
 keys_set(Keys, {P} = Object, Value) when is_list(P) ->
@@ -980,10 +980,10 @@ keys_set(_Keys, Term, _Value) ->
                Object :: json_object() | json_array(), 
                Value :: json_term() | jsn__delete,
                Empty :: json_object()) -> json_object() | json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @private implements `keys_set/3', using the given empty object for generating
 %% new objects if none is present in an intermediate layer of the key list
-%%------------------------------------------------------------------------------
+%%
 keys_set([], _Object, Value, _Empty) ->
     Value;
 keys_set(Keys, {struct, P}, Value, Empty) when is_list(P) ->
@@ -1009,11 +1009,11 @@ keys_set([Index | Rest], A, Value, Empty) when is_integer(Index);
 -spec key_set(binary(),
               Object :: json_proplist(), 
               Value :: json_term() | jsn__delete) -> json_proplist().
-%%------------------------------------------------------------------------------
+%%
 %% @private given a key, a json_object, and a value, store the value in the
 %% object at the key; if the value is a deletion, remove the key, value pair, 
 %% if it exists
-%%------------------------------------------------------------------------------
+%%
 key_set(Key, M, jsn__delete) when is_binary(Key) andalso is_map(M) ->
     maps:remove(Key, maps:remove(safe_binary_to_atom(Key), M));
 key_set(Key, M, Value) when is_binary(Key) andalso is_map(M) -> 
@@ -1033,11 +1033,11 @@ key_set(_Key, Term, _Value) ->
 -spec set_nth(Index :: json_array_index(),
               Array :: json_array(),
               Value :: json_term() | jsn__delete) -> json_array().
-%%------------------------------------------------------------------------------
+%%
 %% @private given a json array index, a json array, and a value to set, replace
 %% the element with the given value; if the index is one greater than the
 %% array length, append a new entry
-%%------------------------------------------------------------------------------
+%%
 set_nth(_Index, [{Tag, _}|_] = P, _V) when Tag =/= struct ->
     throw({error, {not_an_array, P}});
 set_nth(First, [_H|T], jsn__delete) when First =:= 1; First =:= first ->
@@ -1064,10 +1064,10 @@ set_nth(Index, _A, _V) ->
 
 -spec return_if_object(MaybeObject :: json_object(),
                        Empty :: json_object()) -> json_object().
-%%------------------------------------------------------------------------------
+%%
 %% @private given a MaybeObject and the Empty object for the format,
 %% return the object if it is one, or else throw a `not_an_object' error
-%%------------------------------------------------------------------------------
+%%
 return_if_object(M, _Empty) when is_map(M) ->
     M;
 return_if_object([{_,_}|_] = P, _Empty) ->
@@ -1081,11 +1081,11 @@ return_if_object(Term, _Empty) ->
 -spec keys_get(path_elements(),
                json_term(),
                Default :: term()) -> json_term() | term().
-%%------------------------------------------------------------------------------
+%%
 %% @private given a list of path elements, and a json term, iteratively 
 %% lookup the path elements in the object and return the value found at the
 %% last key, if present; otherwise, return the default.
-%%------------------------------------------------------------------------------
+%%
 keys_get([], Object, _Default) ->
     Object;
 keys_get([Key | Rest], Object, Default) ->
@@ -1095,11 +1095,11 @@ keys_get([Key | Rest], Object, Default) ->
 -spec key_get(path_element(),
               json_term(),
               Default :: term()) -> json_term() | term().
-%%------------------------------------------------------------------------------
+%%
 %% @private get the value of a key from a json object or json proplist object,
 %% or return undefined; this is function does not support nested keys (i.e., 
 %% paths), only single, flat keys
-%%------------------------------------------------------------------------------
+%%
 key_get(Key, M, Default) when is_map(M) ->
     case maps:find(Key, M) of
         error ->
@@ -1131,10 +1131,10 @@ key_get(_Key, _List, Default) ->
 -spec get_nth(Index :: json_array_index(),
               Array :: json_term(),
               Default :: term()) -> json_term() | term().
-%%------------------------------------------------------------------------------
+%%
 %% @private given a json array index, a json array, and a default value, get
 %% the element at the given index, or return the default
-%%------------------------------------------------------------------------------
+%%
 get_nth(_Index, [], Default) ->
     Default;
 get_nth(first, [First|_], Default) ->
@@ -1148,11 +1148,11 @@ get_nth(_Index, _A, Default) -> Default.
 
 -spec get_if_valid(Element :: json_term(),
                    Default :: term()) -> json_term() | term().
-%%------------------------------------------------------------------------------
+%%
 %% @private helper function for get_nth/3. given an element of an array, if it
 %% is an element that can be an array member, return it. Otherwise, return the
 %% Default.
-%%------------------------------------------------------------------------------
+%%
 get_if_valid(T, _Default) when ?IS_SIMPLE_JSON_TERM(T) -> T;
 get_if_valid(M, _Default) when is_map(M) -> M;
 get_if_valid(P, _Default) when is_list(P) -> P;
@@ -1165,14 +1165,14 @@ get_if_valid(_, Default) -> Default.
                  Original :: json_object() | json_array(),
                  Other :: json_object() | json_array(),
                  Mode :: soft | hard) -> ok | {error, BinPath::binary()}.
-%%------------------------------------------------------------------------------
+%%
 %% @private given a field and two json_objects (original and other), return ok
 %% if the field has an equivalent value in both json_objects; if not, return
 %% `{error, Path}'' with the binary string form of the field
 %%
 %% if mode is soft, a mismatch is allowed if the value is missing from
 %% OtherObject.
-%%------------------------------------------------------------------------------
+%%
 path_equal(Path, OriginalObject, OtherObject, soft) ->
     case get(Path, OtherObject) of
         undefined -> ok;
@@ -1190,7 +1190,7 @@ path_equal(Path, OriginalObject, OtherObject, _HardMode) ->
       Original :: json_object() | json_array(),
       Other :: json_object() | json_array(),
       Mode :: soft | hard) -> ok | {error, {not_equal, Message :: binary()}}.
-%%------------------------------------------------------------------------------
+%%
 %% @private given a list of fields, an original json_object, and another 
 %% json_object, verify that each path in each of the other object has the same
 %% value as the original does at the same path, for each path in the list of 
@@ -1199,7 +1199,7 @@ path_equal(Path, OriginalObject, OtherObject, _HardMode) ->
 %%
 %% if mode is soft, a mismatch is allowed if the value is missing from the new
 %% object.
-%%------------------------------------------------------------------------------
+%%
 object_equal(Paths, OriginalObject, OtherObject, Mode) ->
     Errors = lists:foldl(fun(Path, MismatchedPaths) ->
         case path_equal(Path, OriginalObject, OtherObject, Mode) of
@@ -1223,10 +1223,10 @@ object_equal(Paths, OriginalObject, OtherObject, Mode) ->
      A :: maps:map(),
      B :: maps:map()) ->
     boolean().
-%%------------------------------------------------------------------------------
+%%
 %% @private compare the values of 2 Erlang maps for the given keys using the
 %% given comparison function
-%%------------------------------------------------------------------------------
+%%
 compare_maps([], _Fun, _A, _B) ->
     true;
 compare_maps([Key | Keys], CompareFun, A, B) ->
@@ -1238,11 +1238,11 @@ compare_maps([Key | Keys], CompareFun, A, B) ->
 -spec get_array_index_map(path_elements_map(),
                           ArrayLength :: non_neg_integer()) ->
     path_elements_map().
-%%------------------------------------------------------------------------------
+%%
 %% @private given a path elements map, return a filtered path elements map where
 %% only valid (in range) array index keys are included; also maps `first'/`last'
 %% atom keys to `1'/`ArrayLength', respectively
-%%------------------------------------------------------------------------------
+%%
 get_array_index_map(PathMap, ArrayLength) ->
     maps:fold(fun(first, V, Acc) ->
                      Acc#{1 => V};
@@ -1258,10 +1258,10 @@ get_array_index_map(PathMap, ArrayLength) ->
 
 
 -spec safe_binary_to_atom(binary()) -> atom() | binary().
-%%------------------------------------------------------------------------------
+%%
 %% @private try to convert a binary to an atom, if the atom exists; otherwise,
 %% return the existing atom
-%%------------------------------------------------------------------------------
+%%
 safe_binary_to_atom(Binary) when is_binary(Binary) ->
     try
         binary_to_existing_atom(Binary, utf8)
@@ -1271,18 +1271,18 @@ safe_binary_to_atom(Binary) when is_binary(Binary) ->
 
 
 -spec to_binary(atom() | binary()) -> binary().
-%%------------------------------------------------------------------------------
+%%
 %% @private convert the input to binary
-%%------------------------------------------------------------------------------
+%%
 to_binary(B) when is_binary(B) -> B;
 to_binary(A) when is_atom(A)   -> atom_to_binary(A, utf8);
 to_binary(I) when is_integer(I)   -> integer_to_binary(I).
 
 
 -spec path_to_binary(path()) -> binary().
-%%------------------------------------------------------------------------------
+%%
 %% @private convert the path to binary
-%%------------------------------------------------------------------------------
+%%
 path_to_binary(Path) when is_binary(Path); is_atom(Path) -> to_binary(Path);
 path_to_binary(T) when is_tuple(T) -> path_to_binary(tuple_to_list(T)); 
 path_to_binary([]) -> <<>>;
@@ -1295,9 +1295,9 @@ path_to_binary([Key0|Rest], Acc) ->
 
 
 -spec binary_join([binary()], Sep :: binary()) -> binary().
-%%------------------------------------------------------------------------------
+%%
 %% @private join the list of binary strings together using the separator
-%%------------------------------------------------------------------------------
+%%
 binary_join([], _Sep) ->
     <<>>;
 binary_join([H|T], Sep) ->
