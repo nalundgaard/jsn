@@ -54,6 +54,11 @@ Future improvements to this library are TBD at this time.
 
 ## Changelog
 
+4 November 2020 - 2.2.1
+
+* Export 'json_map()' type, remove ifdef(TEST) logic ([#39](https://github.com/nalundgaard/jsn/pull/39))
+* Edoc fix ([#38](https://github.com/nalundgaard/jsn/pull/38))
+
 9 June 2020 - 2.2.0
 
 * Add `with/2` and `without/2` ([#36](https://github.com/nalundgaard/jsn/pull/36))
