@@ -34,15 +34,11 @@
 -export([as_map/1, from_map/1, from_map/2,
          as_proplist/1, from_proplist/1, from_proplist/2]).
 
--ifdef(TEST).
--compile([export_all]).
--endif.
-
 %%==============================================================================
 %% types
 %%==============================================================================
 
--export_type([json_proplist/0, json_eep18/0, json_struct/0,
+-export_type([json_map/0, json_proplist/0, json_eep18/0, json_struct/0,
               json_object/0,
               json_term/0,
               path/0, paths/0,
