@@ -1,8 +1,6 @@
 
 -module(jsn_tests).
 
--ifdef(TEST).
--compile([export_all]).
 -include_lib("eunit/include/eunit.hrl").
 
 -include("jsn.hrl").
@@ -1149,6 +1147,3 @@ binary_join_test_() ->
     [?_assertEqual(<<"foo bar">>, jsn:binary_join([<<"foo">>,<<"bar">>], <<" ">>)),
      ?_assertEqual(<<"foo">>, jsn:binary_join([<<"foo">>], <<" ">>)),
      ?_assertEqual(<<>>, jsn:binary_join([], <<" ">>))].
-
-
--endif.
