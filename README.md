@@ -2,6 +2,8 @@
 
 [![Build Status](https://secure.travis-ci.org/nalundgaard/jsn.png?branch=master)](http://travis-ci.org/nalundgaard/jsn)
 
+[![Hex.pm version](https://img.shields.io/hexpm/v/jsn.svg?style=flat)](https://hex.pm/packages/jsn)
+
 jsn is a tool for working with JSON representations in erlang--complex, nested
 JSON objects in particular.
 
