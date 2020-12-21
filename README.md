@@ -2,6 +2,8 @@
 
 [![Build Status](https://github.com/nalundgaard/jsn/workflows/build/badge.svg)](https://github.com/nalundgaard/jsn/actions?query=workflow:build)
 
+[![Hex.pm version](https://img.shields.io/hexpm/v/jsn.svg?style=flat)](https://hex.pm/packages/jsn)
+
 jsn is a tool for working with JSON representations in erlang--complex, nested
 JSON objects in particular.
 
