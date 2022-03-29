@@ -56,6 +56,10 @@ Future improvements to this library are TBD at this time.
 
 ## Changelog
 
+29 March 2022 - 2.2.2
+
+* Patch jsn:delete to delete objects at end of path ([#43](https://github.com/nalundgaard/jsn/pull/43))
+
 4 November 2020 - 2.2.1
 
 * Export 'json_map()' type, remove ifdef(TEST) logic ([#39](https://github.com/nalundgaard/jsn/pull/39))
