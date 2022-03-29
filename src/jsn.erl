@@ -989,7 +989,8 @@ keys_set(Keys, {P}, Value, Empty) when is_list(P) ->
 keys_set([Key | Rest], Object, Value, Empty)
   when is_binary(Key), (is_list(Object) orelse is_map(Object)) ->
     case key_get(Key, Object, jsn__undefined) of
-        E when Value =:= jsn__delete, (E =:= jsn__undefined orelse E =:= Empty) ->
+        E when Value =:= jsn__delete, Rest /= [],
+               (E =:= jsn__undefined orelse E =:= Empty) ->
             return_if_object(Object, Empty);
         E when E =:= jsn__undefined; E =:= Empty ->
             key_set(Key, Object, keys_set(Rest, Empty, Value, Empty)); 
