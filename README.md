@@ -338,7 +338,7 @@ User = jsn:new([{'user.id', <<"123">>},
 UserId = jsn:get('user.id', User).
 % <<"123">>
 
-% get a non-existant field, with and without a custom default
+% get a non-existent field, with and without a custom default
 jsn:get(<<"user.deleted">>, User).
 % undefined
 jsn:get([<<"user">>, <<"deleted">>], User, false).
