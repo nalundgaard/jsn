@@ -310,7 +310,7 @@ each element in the input list. A `Selection` is one of the following:
   if it is missing
 * `identity` - select the whole object
 
-`Conditions` can be passed singularly or as a list in `select/3`. A `Conditioon`
+`Conditions` can be passed singularly or as a list in `select/3`. A `Condition`
 is one of the following:
 
 * {Path, Value} - include an element if the value at the given `Path` in the
